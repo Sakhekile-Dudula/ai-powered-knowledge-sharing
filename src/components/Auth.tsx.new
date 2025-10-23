@@ -1,0 +1,1292 @@
+import { useState } from 'react';import { useState } from 'react';import { useState } from "react";import { useState } from "react";import { useState } from "react";import { useState } from "react";import { useState, useEffect } from "react";import { useEffect } from "react";
+
+import { Brain } from "lucide-react";
+
+import { Button } from "./ui/button";import { Brain } from "lucide-react";
+
+import { Card } from "./ui/card";
+
+import { Input } from "./ui/input";import { Button } from "./ui/button";import { Card } from "./ui/card";
+
+import { Label } from "./ui/label";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";import { Card } from "./ui/card";
+
+import { supabase } from '../lib/supabase';
+
+import { toast } from "sonner";import { Input } from "./ui/input";import { Button } from "./ui/button";import { Card, CardDescription } from "./ui/card";
+
+
+
+interface AuthProps {import { Label } from "./ui/label";
+
+  onAuthSuccess: (account: any) => void;
+
+}import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";import { Input } from "./ui/input";
+
+
+
+interface SignUpFormData {import { createClient } from "@supabase/supabase-js";
+
+  name: string;
+
+  email: string;import { Label } from "./ui/label";import { Button } from "./ui/button";import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+
+  password: string;
+
+  role: string;interface AuthProps {
+
+  team: string;
+
+  expertise: string;  onAuthSuccess: (account: any) => void;import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+
+}
+
+}
+
+export function Auth({ onAuthSuccess }: AuthProps) {
+
+  const [isLoading, setIsLoading] = useState(false);import { Badge } from "./ui/badge";import { useMsal } from "@azure/msal-react";
+
+  const [signUpData, setSignUpData] = useState<SignUpFormData>({
+
+    name: "",interface SignUpFormData {
+
+    email: "",
+
+    password: "",  name: string;import { Brain } from "lucide-react";
+
+    role: "",
+
+    team: "",  email: string;
+
+    expertise: ""
+
+  });  password: string;import { loginRequest } from "../utils/authConfig";import { Button } from "./ui/button";import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+
+
+
+  const handleLogin = async () => {  role: string;
+
+    if (!signUpData.email || !signUpData.password) {
+
+      toast.error("Please enter both email and password");  team: string;interface AuthProps {
+
+      return;
+
+    }  expertise: string;
+
+
+
+    setIsLoading(true);}  onAuthSuccess: (account: any) => void;import { Brain } from "lucide-react";
+
+    try {
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+
+        email: signUpData.email,
+
+        password: signUpData.password,export function Auth({ onAuthSuccess }: AuthProps) {}
+
+      });
+
+  const [isLoading, setIsLoading] = useState(false);
+
+      if (error) {
+
+        toast.error(error.message);  const [signUpData, setSignUpData] = useState<SignUpFormData>({import { useMsal } from "@azure/msal-react";
+
+        return;
+
+      }    name: "",
+
+
+
+      if (!data.user) {    email: "",interface SignUpFormData {
+
+        toast.error("Invalid login credentials");
+
+        return;    password: "",
+
+      }
+
+    role: "",  name: string;interface AuthProps {
+
+      // Get the user's profile
+
+      const { data: profile, error: profileError } = await supabase    team: "",
+
+        .from('profiles')
+
+        .select('*')    expertise: ""  email: string;
+
+        .eq('id', data.user.id)
+
+        .single();  });
+
+
+
+      if (profileError) {  password: string;  onAuthSuccess: (account: any) => void;import { loginRequest } from "../utils/authConfig";import { Button } from "./ui/button";import { Card } from "./ui/card";import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+
+        toast.error("Error fetching user profile");
+
+        return;  const handleLogin = async () => {
+
+      }
+
+    setIsLoading(true);  role: string;
+
+      toast.success("Successfully signed in");
+
+      onAuthSuccess({    try {
+
+        ...profile,
+
+        email: data.user.email      // Implement login logic here  team: string;}
+
+      });
+
+    } catch (err) {      // For now just show loading state
+
+      console.error("Login failed:", err);
+
+      toast.error("Login failed. Please try again.");      await new Promise(resolve => setTimeout(resolve, 1000));  expertise: string;
+
+    } finally {
+
+      setIsLoading(false);      
+
+    }
+
+  };      // Mock successful login}import { Brain } from "lucide-react";
+
+
+
+  const handleSignUp = async () => {      onAuthSuccess({
+
+    // Validate all required fields
+
+    if (!signUpData.email || !signUpData.password || !signUpData.name || !signUpData.role || !signUpData.team || !signUpData.expertise) {        email: signUpData.email
+
+      toast.error("Please fill in all required fields");
+
+      return;      });
+
+    }
+
+    } catch (err) {export function Auth({ onAuthSuccess }: AuthProps) {export function Auth({ onAuthSuccess }: AuthProps) {
+
+    // Validate password strength
+
+    if (signUpData.password.length < 8) {      console.error("Login failed:", err);
+
+      toast.error("Password must be at least 8 characters long");
+
+      return;    } finally {  const [isLoading, setIsLoading] = useState(false);
+
+    }
+
+      setIsLoading(false);
+
+    setIsLoading(true);
+
+    try {    }  const [email, setEmail] = useState("");  const { instance } = useMsal();import { useMsal } from "@azure/msal-react";
+
+      // Create auth user
+
+      const { data, error: signUpError } = await supabase.auth.signUp({  };
+
+        email: signUpData.email,
+
+        password: signUpData.password,  const [password, setPassword] = useState("");
+
+        options: {
+
+          data: {  const handleSignUp = async () => {
+
+            name: signUpData.name,
+
+          },    setIsLoading(true);  const [signUpData, setSignUpData] = useState<SignUpFormData>({  const [isLoading, setIsLoading] = useState(false);
+
+        },
+
+      });    try {
+
+
+
+      if (signUpError) {      // Implement signup logic here    name: "",
+
+        toast.error(signUpError.message);
+
+        return;      // For now just show loading state
+
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));    email: "",interface AuthProps {
+
+      if (!data.user) {
+
+        toast.error("Failed to create account");
+
+        return;
+
+      }      // Mock successful signup    password: "",
+
+
+
+      // Create user profile      onAuthSuccess({
+
+      const { error: profileError } = await supabase
+
+        .from('profiles')        email: signUpData.email,    role: "",  const handleLogin = async () => {
+
+        .insert([
+
+          {        ...signUpData
+
+            id: data.user.id,
+
+            name: signUpData.name,      });    team: "",
+
+            role: signUpData.role,
+
+            team: signUpData.team,    } catch (err) {
+
+            expertise: signUpData.expertise,
+
+          },      console.error("Sign up failed:", err);    expertise: ""    setIsLoading(true);  onAuthSuccess: (account: any) => void;import { loginRequest } from "../utils/authConfig";import { createClient } from "../utils/supabase/client";import { Button } from "./ui/button";
+
+        ]);
+
+    } finally {
+
+      if (profileError) {
+
+        console.error("Profile creation failed:", profileError);      setIsLoading(false);  });
+
+        toast.error("Failed to create user profile");
+
+        return;    }
+
+      }
+
+  };    try {
+
+      toast.success("Account created successfully! Please check your email to verify your account.");
+
+      
+
+      // Return full user data
+
+      onAuthSuccess({  const handleSignUpInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {  const handleSignIn = async (e: React.FormEvent) => {
+
+        id: data.user.id,
+
+        email: data.user.email,    setSignUpData(prev => ({
+
+        ...signUpData
+
+      });      ...prev,    e.preventDefault();      const response = await instance.loginPopup(loginRequest);}
+
+    } catch (err) {
+
+      console.error("Sign up failed:", err);      [e.target.name]: e.target.value
+
+      toast.error("Sign up failed. Please try again.");
+
+    } finally {    }));    setIsLoading(true);
+
+      setIsLoading(false);
+
+    }  };
+
+  };
+
+    try {      if (response?.account) {
+
+  const handleSignUpInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+    setSignUpData(prev => ({  return (
+
+      ...prev,
+
+      [e.target.name]: e.target.value    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">      // TODO: Implement actual authentication
+
+    }));
+
+  };      <div className="w-full max-w-md">
+
+
+
+  return (        <Card className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">      console.log("Sign in with:", { email, password });        onAuthSuccess(response.account);
+
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">
+
+      <div className="w-full max-w-md">          <div className="flex justify-center mb-4 pt-6">
+
+        <Card className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">
+
+          <div className="flex justify-center mb-4 pt-6">            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">      onAuthSuccess({ email });
+
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
+
+              <Brain className="w-8 h-8 text-white" />              <Brain className="w-8 h-8 text-white" />
+
+            </div>
+
+          </div>            </div>    } catch (err) {      }
+
+          <div className="text-center">
+
+            <h4 className="leading-none">MRI Synapse</h4>          </div>
+
+            <p className="text-muted-foreground">Cross-Team Intelligence Hub</p>
+
+          </div>          <div className="text-center">      console.error("Login failed:", err);
+
+          
+
+          <div data-slot="card-content" className="px-6 [&:last-child]:pb-6">            <h4 className="leading-none">MRI Synapse</h4>
+
+            <Tabs defaultValue="signin" className="flex flex-col gap-2">
+
+              <TabsList className="w-full">            <p className="text-muted-foreground">Cross-Team Intelligence Hub</p>    } finally {    } catch (err) {export function Auth({ onAuthSuccess }: AuthProps) {
+
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
+
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>          </div>
+
+              </TabsList>
+
+                setIsLoading(false);
+
+              <TabsContent value="signin" className="mt-4">
+
+                <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>          <div data-slot="card-content" className="px-6 [&:last-child]:pb-6">
+
+                  <div className="space-y-4">
+
+                    <div className="space-y-2">            <Tabs defaultValue="signin" className="flex flex-col gap-2">    }      console.error("Login failed:", err);
+
+                      <Label htmlFor="signin-email">Email</Label>
+
+                      <Input              <TabsList className="w-full">
+
+                        id="signin-email"
+
+                        name="email"                <TabsTrigger value="signin">Sign In</TabsTrigger>  };
+
+                        type="email"
+
+                        placeholder="Enter your email"                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+
+                        required
+
+                        value={signUpData.email}              </TabsList>    } finally {  const { instance } = useMsal();interface AuthProps {import { User } from '@supabase/supabase-js';import { Brain } from "lucide-react";
+
+                        onChange={handleSignUpInputChange}
+
+                      />
+
+                    </div>
+
+                    <div className="space-y-2">              <TabsContent value="signin" className="mt-4">  const handleSignUp = async (e: React.FormEvent) => {
+
+                      <Label htmlFor="signin-password">Password</Label>
+
+                      <Input                <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+
+                        id="signin-password"
+
+                        name="password"                  <div className="space-y-4">    e.preventDefault();      setIsLoading(false);
+
+                        type="password"
+
+                        required                    <div className="space-y-2">
+
+                        placeholder="Enter your password"
+
+                        value={signUpData.password}                      <Label htmlFor="signin-email">Email</Label>    setIsLoading(true);
+
+                        onChange={handleSignUpInputChange}
+
+                      />                      <Input
+
+                    </div>
+
+                    <Button                        id="signin-email"    try {    }  const [isLoading, setIsLoading] = useState(false);
+
+                      type="submit"
+
+                      className="w-full"                        name="email"
+
+                      disabled={isLoading}
+
+                    >                        type="email"      // TODO: Implement actual sign up
+
+                      {isLoading ? (
+
+                        <span className="flex items-center gap-2">                        placeholder="Enter your email"
+
+                          Signing in...
+
+                        </span>                        required      console.log("Sign up with:", signUpData);  };
+
+                      ) : (
+
+                        "Sign In"                        value={signUpData.email}
+
+                      )}
+
+                    </Button>                        onChange={handleSignUpInputChange}    } catch (err) {
+
+                  </div>
+
+                </form>                      />
+
+              </TabsContent>
+
+                    </div>      console.error("Sign up failed:", err);  onAuthSuccess: (account: any) => void;
+
+              <TabsContent value="signup" className="mt-4">
+
+                <form onSubmit={(e) => { e.preventDefault(); handleSignUp(); }}>                    <div className="space-y-2">
+
+                  <div className="space-y-4">
+
+                    <div className="space-y-2">                      <Label htmlFor="signin-password">Password</Label>    } finally {
+
+                      <Label htmlFor="name">Full Name</Label>
+
+                      <Input                      <Input
+
+                        id="name"
+
+                        name="name"                        id="signin-password"      setIsLoading(false);  return (
+
+                        placeholder="Enter your full name"
+
+                        required                        name="password"
+
+                        value={signUpData.name}
+
+                        onChange={handleSignUpInputChange}                        type="password"    }
+
+                      />
+
+                    </div>                        required
+
+                    <div className="space-y-2">
+
+                      <Label htmlFor="email">Email</Label>                        placeholder="Enter your password"  };    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">  const handleLogin = async () => {
+
+                      <Input
+
+                        id="email"                        value={signUpData.password}
+
+                        name="email"
+
+                        type="email"                        onChange={handleSignUpInputChange}
+
+                        placeholder="Enter your email"
+
+                        required                      />
+
+                        value={signUpData.email}
+
+                        onChange={handleSignUpInputChange}                    </div>  const handleSignUpInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {      <div className="w-full max-w-md">
+
+                      />
+
+                    </div>                    <Button
+
+                    <div className="space-y-2">
+
+                      <Label htmlFor="password">Password</Label>                      type="submit"    const { id, value } = e.target;
+
+                      <Input
+
+                        id="password"                      className="w-full"
+
+                        name="password"
+
+                        type="password"                      disabled={isLoading}    setSignUpData(prev => ({        <Card className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">    setIsLoading(true);}import { Button } from "./ui/button";import { useMsal, useIsAuthenticated } from "@azure/msal-react";
+
+                        placeholder="Create a password (min. 8 characters)"
+
+                        required                    >
+
+                        value={signUpData.password}
+
+                        onChange={handleSignUpInputChange}                      {isLoading ? (      ...prev,
+
+                      />
+
+                    </div>                        <span className="flex items-center gap-2">
+
+                    <div className="space-y-2">
+
+                      <Label htmlFor="role">Role</Label>                          Signing in...      [id.replace('signup-', '')]: value          <div data-slot="card-header" className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 pt-6 text-center">
+
+                      <Input
+
+                        id="role"                        </span>
+
+                        name="role"
+
+                        placeholder="Enter your role"                      ) : (    }));
+
+                        required
+
+                        value={signUpData.role}                        'Sign In'
+
+                        onChange={handleSignUpInputChange}
+
+                      />                      )}  };            <div className="flex justify-center mb-4">    try {
+
+                    </div>
+
+                    <div className="space-y-2">                    </Button>
+
+                      <Label htmlFor="team">Team</Label>
+
+                      <Input                  </div>
+
+                        id="team"
+
+                        name="team"                </form>
+
+                        placeholder="Enter your team"
+
+                        required              </TabsContent>  return (              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
+
+                        value={signUpData.team}
+
+                        onChange={handleSignUpInputChange}
+
+                      />
+
+                    </div>              <TabsContent value="signup" className="mt-4">    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">
+
+                    <div className="space-y-2">
+
+                      <Label htmlFor="expertise">Area of Expertise</Label>                <form onSubmit={(e) => { e.preventDefault(); handleSignUp(); }}>
+
+                      <Input
+
+                        id="expertise"                  <div className="space-y-4">      <div className="w-full max-w-md">                <Brain className="w-10 h-10 text-white" aria-hidden="true" />      const response = await instance.loginPopup(loginRequest);
+
+                        name="expertise"
+
+                        placeholder="Enter your area of expertise"                    <div className="space-y-2">
+
+                        required
+
+                        value={signUpData.expertise}                      <Label htmlFor="name">Full Name</Label>        <Card className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">
+
+                        onChange={handleSignUpInputChange}
+
+                      />                      <Input
+
+                    </div>
+
+                    <Button                        id="name"          <div data-slot="card-header" className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 pt-6 text-center">              </div>
+
+                      type="submit"
+
+                      className="w-full"                        name="name"
+
+                      disabled={isLoading}
+
+                    >                        placeholder="Enter your full name"            <div className="flex justify-center mb-4">
+
+                      {isLoading ? (
+
+                        <span className="flex items-center gap-2">                        required
+
+                          Creating account...
+
+                        </span>                        value={signUpData.name}              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">            </div>      if (response?.account) {
+
+                      ) : (
+
+                        "Create Account"                        onChange={handleSignUpInputChange}
+
+                      )}
+
+                    </Button>                      />                <Brain className="w-10 h-10 text-white" aria-hidden="true" />
+
+                  </div>
+
+                </form>                    </div>
+
+              </TabsContent>
+
+            </Tabs>                    <div className="space-y-2">              </div>            <h4 className="leading-none">MRI Synapse</h4>
+
+          </div>
+
+        </Card>                      <Label htmlFor="email">Email</Label>
+
+      </div>
+
+    </div>                      <Input            </div>
+
+  );
+
+}                        id="email"
+
+                        name="email"            <h4 className="leading-none">MRI Synapse</h4>            <p className="text-muted-foreground">Cross-Team Intelligence Hub</p>        onAuthSuccess(response.account);export function Auth({ onAuthSuccess }: AuthProps) {import { Input } from "./ui/input";import { loginRequest } from "../utils/authConfig";
+
+                        type="email"
+
+                        placeholder="Enter your email"            <p className="text-muted-foreground">Cross-Team Intelligence Hub</p>
+
+                        required
+
+                        value={signUpData.email}          </div>          </div>
+
+                        onChange={handleSignUpInputChange}
+
+                      />
+
+                    </div>
+
+                    <div className="space-y-2">          <div data-slot="card-content" className="px-6 [&:last-child]:pb-6">      }
+
+                      <Label htmlFor="password">Password</Label>
+
+                      <Input            <Tabs defaultValue="signin" className="flex flex-col gap-2">
+
+                        id="password"
+
+                        name="password"              <TabsList className="bg-muted text-muted-foreground h-9 items-center justify-center rounded-xl p-[3px] grid w-full grid-cols-2 mb-6">          <div data-slot="card-content" className="px-6 pb-6">
+
+                        type="password"
+
+                        placeholder="Create a password"                <TabsTrigger value="signin">Sign In</TabsTrigger>
+
+                        required
+
+                        value={signUpData.password}                <TabsTrigger value="signup">Sign Up</TabsTrigger>            <div className="flex flex-col gap-4">    } catch (err) {  const { instance } = useMsal();
+
+                        onChange={handleSignUpInputChange}
+
+                      />              </TabsList>
+
+                    </div>
+
+                    <div className="space-y-2">              <CardDescription className="text-center">
+
+                      <Label htmlFor="role">Role</Label>
+
+                      <Input              <TabsContent value="signin">
+
+                        id="role"
+
+                        name="role"                <form className="space-y-4" onSubmit={handleSignIn}>                Sign in with your Microsoft account to access the platform      console.error('Login failed:', err);
+
+                        placeholder="Enter your role"
+
+                        required                  <div className="space-y-2">
+
+                        value={signUpData.role}
+
+                        onChange={handleSignUpInputChange}                    <Label htmlFor="signin-email">Email</Label>              </CardDescription>
+
+                      />
+
+                    </div>                    <Input
+
+                    <div className="space-y-2">
+
+                      <Label htmlFor="team">Team</Label>                      id="signin-email"              <Button    } finally {  const [isLoading, setIsLoading] = useState(false);import { toast } from "sonner";
+
+                      <Input
+
+                        id="team"                      type="email"
+
+                        name="team"
+
+                        placeholder="Enter your team"                      placeholder="you@mrisoftware.com"                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full"
+
+                        required
+
+                        value={signUpData.team}                      required
+
+                        onChange={handleSignUpInputChange}
+
+                      />                      value={email}                onClick={handleLogin}      setIsLoading(false);
+
+                    </div>
+
+                    <div className="space-y-2">                      onChange={(e) => setEmail(e.target.value)}
+
+                      <Label htmlFor="expertise">Area of Expertise</Label>
+
+                      <Input                    />                disabled={isLoading}
+
+                        id="expertise"
+
+                        name="expertise"                  </div>
+
+                        placeholder="Enter your area of expertise"
+
+                        required                  <div className="space-y-2">              >    }
+
+                        value={signUpData.expertise}
+
+                        onChange={handleSignUpInputChange}                    <Label htmlFor="signin-password">Password</Label>
+
+                      />
+
+                    </div>                    <Input                {isLoading ? (
+
+                    <Button
+
+                      type="submit"                      id="signin-password"
+
+                      className="w-full"
+
+                      disabled={isLoading}                      type="password"                  <span className="flex items-center gap-2">  };
+
+                    >
+
+                      {isLoading ? (                      required
+
+                        <span className="flex items-center gap-2">
+
+                          Creating account...                      value={password}                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+
+                        </span>
+
+                      ) : (                      onChange={(e) => setPassword(e.target.value)}
+
+                        'Create Account'
+
+                      )}                    />                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />  const handleLogin = async () => {import { Loader2 } from "lucide-react";interface AuthProps {
+
+                    </Button>
+
+                  </div>                  </div>
+
+                </form>
+
+              </TabsContent>                  <Button type="submit" className="w-full" disabled={isLoading}>                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+
+            </Tabs>
+
+          </div>                    {isLoading ? (
+
+        </Card>
+
+      </div>                      <span className="flex items-center gap-2">                    </svg>  return (
+
+    </div>
+
+  );                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+
+}
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />                    Signing in...
+
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+
+                        </svg>                  </span>    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">    setIsLoading(true);
+
+                        Signing in...
+
+                      </span>                ) : (
+
+                    ) : (
+
+                      "Sign In"                  "Sign in with Microsoft"      <div className="w-full max-w-md">
+
+                    )}
+
+                  </Button>                )}
+
+                </form>
+
+              </TabsContent>              </Button>        <Card className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">    try {  onAuthSuccess: (account: any) => void;
+
+
+
+              <TabsContent value="signup">            </div>
+
+                <form className="space-y-4" onSubmit={handleSignUp}>
+
+                  <div className="space-y-2">          </div>          <div data-slot="card-header" className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 pt-6 text-center">
+
+                    <Label htmlFor="signup-name">Full Name</Label>
+
+                    <Input        </Card>
+
+                      id="signup-name"
+
+                      type="text"      </div>            <div className="flex justify-center mb-4">      const response = await instance.loginPopup(loginRequest);
+
+                      placeholder="Sarah Mitchell"
+
+                      required    </div>
+
+                      value={signUpData.name}
+
+                      onChange={handleSignUpInputChange}  );              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
+
+                    />
+
+                  </div>}
+
+                  <div className="space-y-2">                <Brain className="w-10 h-10 text-white" aria-hidden="true" />      if (response?.account) {interface AuthProps {}
+
+                    <Label htmlFor="signup-email">Email</Label>
+
+                    <Input              </div>
+
+                      id="signup-email"
+
+                      type="email"            </div>        onAuthSuccess(response.account);
+
+                      placeholder="you@mrisoftware.com"
+
+                      required            <h4 className="leading-none">MRI Synapse</h4>
+
+                      value={signUpData.email}
+
+                      onChange={handleSignUpInputChange}            <p className="text-muted-foreground">Cross-Team Intelligence Hub</p>      }  onAuthSuccess: (user: User) => void;
+
+                    />
+
+                  </div>          </div>
+
+                  <div className="space-y-2">
+
+                    <Label htmlFor="signup-password">Password</Label>    } catch (err) {
+
+                    <Input
+
+                      id="signup-password"          <div data-slot="card-content" className="px-6 pb-6">
+
+                      type="password"
+
+                      required            <div className="flex flex-col gap-4">      console.error('Login failed:', err);}export function Auth({ onAuthSuccess }: AuthProps) {
+
+                      value={signUpData.password}
+
+                      onChange={handleSignUpInputChange}              <CardDescription className="text-center">
+
+                    />
+
+                  </div>                Sign in with your Microsoft account to access the platform    } finally {
+
+                  <div className="space-y-2">
+
+                    <Label htmlFor="signup-role">Role</Label>              </CardDescription>
+
+                    <Input
+
+                      id="signup-role"              <Button      setIsLoading(false);  const { instance, accounts } = useMsal();
+
+                      type="text"
+
+                      placeholder="Senior Engineer"                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full"
+
+                      required
+
+                      value={signUpData.role}                onClick={handleLogin}    }
+
+                      onChange={handleSignUpInputChange}
+
+                    />                disabled={isLoading}
+
+                  </div>
+
+                  <div className="space-y-2">              >  };export function Auth({ onAuthSuccess }: AuthProps) {  const isAuthenticated = useIsAuthenticated();
+
+                    <Label htmlFor="signup-team">Team</Label>
+
+                    <Input                {isLoading ? (
+
+                      id="signup-team"
+
+                      type="text"                  <span className="flex items-center gap-2">
+
+                      placeholder="Engineering"
+
+                      required                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+
+                      value={signUpData.team}
+
+                      onChange={handleSignUpInputChange}                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />  return (  const supabase = createClient();
+
+                    />
+
+                  </div>                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+
+                  <div className="space-y-2">
+
+                    <Label htmlFor="signup-expertise">Expertise (comma-separated)</Label>                    </svg>    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">
+
+                    <Input
+
+                      id="signup-expertise"                    Signing in...
+
+                      type="text"
+
+                      placeholder="React, Node.js, API Design"                  </span>      <div className="w-full max-w-md">  const [isLoading, setIsLoading] = useState(false);  useEffect(() => {
+
+                      value={signUpData.expertise}
+
+                      onChange={handleSignUpInputChange}                ) : (
+
+                    />
+
+                  </div>                  "Sign in with Microsoft"        <Card className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">
+
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+
+                    {isLoading ? "Creating account..." : "Create Account"}                )}
+
+                  </Button>
+
+                </form>              </Button>          <div data-slot="card-header" className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 pt-6 text-center">  const [isSignUp, setIsSignUp] = useState(false);    if (accounts.length > 0) {
+
+              </TabsContent>
+
+            </Tabs>            </div>
+
+
+
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">          </div>            <div className="flex justify-center mb-4">
+
+              <p className="text-sm text-slate-700 mb-2">Demo Credentials:</p>
+
+              <div className="space-y-1">        </Card>
+
+                <p className="text-xs text-slate-600">Email: demo@mrisoftware.com</p>
+
+                <p className="text-xs text-slate-600">Password: demo123</p>      </div>              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">  const [email, setEmail] = useState('');      onAuthSuccess(accounts[0]);
+
+              </div>
+
+              <Badge variant="secondary" className="mt-2 text-xs">Or create your own account</Badge>    </div>
+
+            </div>
+
+          </div>  );                <svg 
+
+        </Card>
+
+      </div>}
+
+    </div>                  xmlns="http://www.w3.org/2000/svg"   const [password, setPassword] = useState('');    }
+
+  );
+
+}                  width="24" 
+
+                  height="24"   const [isMagicLink, setIsMagicLink] = useState(false);  }, [accounts, onAuthSuccess]);
+
+                  viewBox="0 0 24 24" 
+
+                  fill="none"   const [isResetPassword, setIsResetPassword] = useState(false);
+
+                  stroke="currentColor" 
+
+                  strokeWidth="2"   const handleLogin = async () => {
+
+                  strokeLinecap="round" 
+
+                  strokeLinejoin="round"   useEffect(() => {    try {
+
+                  className="lucide lucide-brain w-10 h-10 text-white" 
+
+                  aria-hidden="true"    const checkSession = async () => {      await instance.loginPopup(loginRequest);
+
+                >
+
+                  <path d="M12 18V5"></path>      const { data: { session } } = await supabase.auth.getSession();    } catch (err) {
+
+                  <path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4"></path>
+
+                  <path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path>      if (session?.user) {      console.error("Login failed:", err);
+
+                  <path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path>
+
+                  <path d="M18 18a4 4 0 0 0 2-7.464"></path>        onAuthSuccess(session.user);    }
+
+                  <path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path>
+
+                  <path d="M6 18a4 4 0 0 1-2-7.464"></path>      }  };
+
+                  <path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path>
+
+                </svg>    };
+
+              </div>
+
+            </div>    checkSession();  return (
+
+            <h4 className="leading-none">MRI Synapse</h4>
+
+            <p className="text-muted-foreground">Cross-Team Intelligence Hub</p>  }, [onAuthSuccess]);    <Card className="w-full max-w-md mx-auto">
+
+          </div>
+
+      <CardHeader>
+
+          <div data-slot="card-content" className="px-6 pb-6">
+
+            <div className="flex flex-col gap-4">  const handleSubmit = async (e: React.FormEvent) => {        <CardTitle className="flex items-center gap-2">
+
+              <CardDescription className="text-center">
+
+                Sign in with your Microsoft account to access the platform    e.preventDefault();          <Brain className="h-6 w-6" />
+
+              </CardDescription>
+
+              <Button    setIsLoading(true);          AI-Powered Knowledge Sharing
+
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full"
+
+                onClick={handleLogin}        </CardTitle>
+
+                disabled={isLoading}
+
+              >    try {        <CardDescription>
+
+                {isLoading ? (
+
+                  <span className="flex items-center gap-2">      if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {          Sign in with your Microsoft account to access the platform
+
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />        toast.error('Please enter a valid email address');        </CardDescription>
+
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+
+                    </svg>        return;      </CardHeader>
+
+                    Signing in...
+
+                  </span>      }      <CardContent>
+
+                ) : (
+
+                  "Sign in with Microsoft"        <Button
+
+                )}
+
+              </Button>      if (!isMagicLink && !isResetPassword && password.length < 6) {          className="w-full"
+
+            </div>
+
+          </div>        toast.error('Password must be at least 6 characters long');          onClick={handleLogin}
+
+        </Card>
+
+      </div>        return;          disabled={isAuthenticated}
+
+    </div>
+
+  );      }        >
+
+}
+          {isAuthenticated ? (
+
+      let authResponse;            "Signed in"
+
+          ) : (
+
+      if (isResetPassword) {            <>
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {              <Brain className="mr-2 h-4 w-4" />
+
+          redirectTo: `${window.location.origin}/reset-password`              Sign in with Microsoft
+
+        });            </>
+
+        if (error) throw error;          )}
+
+        toast.success('Check your email for the password reset link!');        </Button>
+
+        setIsResetPassword(false);      </CardContent>
+
+        return;    </Card>
+
+      } else if (isMagicLink) {  );
+
+        authResponse = await supabase.auth.signInWithOtp({}
+          email,
+          options: {
+            emailRedirectTo: window.location.origin
+          }
+        });
+        if (!authResponse.error) {
+          toast.success('Check your email for the magic link!');
+          return;
+        }
+      } else {
+        authResponse = isSignUp
+          ? await supabase.auth.signUp({ 
+              email, 
+              password,
+              options: {
+                emailRedirectTo: `${window.location.origin}/auth/callback`
+              }
+            })
+          : await supabase.auth.signInWithPassword({ email, password });
+      }
+
+      if (authResponse?.error) {
+        toast.error(authResponse.error.message);
+        return;
+      }
+
+      if (authResponse?.data?.user) {
+        toast.success(isSignUp ? 'Account created successfully! Please check your email to verify your account.' : 'Signed in successfully!');
+        onAuthSuccess(authResponse.data.user);
+      }
+
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">
+          <div data-slot="card-header" className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 pt-6 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="24" 
+                  height="24" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="lucide lucide-brain w-10 h-10 text-white" 
+                  aria-hidden="true"
+                >
+                  <path d="M12 18V5"></path>
+                  <path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4"></path>
+                  <path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path>
+                  <path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path>
+                  <path d="M18 18a4 4 0 0 0 2-7.464"></path>
+                  <path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path>
+                  <path d="M6 18a4 4 0 0 1-2-7.464"></path>
+                  <path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path>
+                </svg>
+              </div>
+            </div>
+            <h4 className="leading-none">MRI Synapse</h4>
+            <p className="text-muted-foreground">Cross-Team Intelligence Hub</p>
+          </div>
+
+          <div data-slot="card-content" className="px-6 [&:last-child]:pb-6">
+            <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="flex flex-col gap-2">
+              <div role="tablist" aria-orientation="horizontal" data-slot="tabs-list" className="bg-muted text-muted-foreground h-9 items-center justify-center rounded-xl p-[3px] grid w-full grid-cols-2 mb-6">
+                <button 
+                  type="button" 
+                  role="tab" 
+                  aria-selected={!isSignUp}
+                  className={`data-[state=active]:bg-card dark:data-[state=active]:text-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] ${!isSignUp ? 'data-[state=active]' : ''}`}
+                  onClick={() => {
+                    setIsSignUp(false);
+                    setIsResetPassword(false);
+                    setIsMagicLink(false);
+                  }}
+                >
+                  Sign In
+                </button>
+                <button 
+                  type="button" 
+                  role="tab" 
+                  aria-selected={isSignUp}
+                  className={`data-[state=active]:bg-card dark:data-[state=active]:text-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] ${isSignUp ? 'data-[state=active]' : ''}`}
+                  onClick={() => {
+                    setIsSignUp(true);
+                    setIsResetPassword(false);
+                    setIsMagicLink(false);
+                  }}
+                >
+                  Sign Up
+                </button>
+              </div>
+
+              <div data-state="active" className="flex-1 outline-none">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <label data-slot="label" className="flex items-center gap-2 text-sm leading-none font-medium select-none" htmlFor="signin-email">
+                      Email
+                    </label>
+                    <Input
+                      id="signin-email"
+                      type="email"
+                      placeholder="you@mrisoftware.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full rounded-md px-3 py-1 text-base bg-input-background transition-[color,box-shadow]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label data-slot="label" className="flex items-center gap-2 text-sm leading-none font-medium select-none" htmlFor="signin-password">
+                      Password
+                    </label>
+                    <Input
+                      id="signin-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full rounded-md px-3 py-1 text-base bg-input-background transition-[color,box-shadow]"
+                    />
+                  </div>
+                  <Button 
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {isSignUp ? 'Creating account...' : 'Signing in...'}
+                      </span>
+                    ) : (
+                      isSignUp ? 'Create Account' : 'Sign In'
+                    )}
+                  </Button>
+                </form>
+              </div>
+            </div>
+
+            {!isSignUp && (
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-slate-700 mb-2">Demo Credentials:</p>
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-600">Email: demo@mrisoftware.com</p>
+                  <p className="text-xs text-slate-600">Password: demo123</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  className="mt-2 text-xs h-6"
+                  onClick={() => setIsSignUp(true)}
+                >
+                  Or create your own account
+                </Button>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,195 @@
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
+import { ScrollArea } from "./ui/scroll-area";
+import { Send, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { startSignalRConnection, getSignalRConnection } from "../utils/signalR";
+
+interface Message {
+  id: string;
+  senderId: string;
+  content: string;
+  createdAt: string;
+  read: boolean;
+}
+
+interface MessagingDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  recipientName: string;
+  recipientId?: string;
+  currentUserName: string;
+  currentUserId?: string;
+  accessToken: string;
+}
+
+export function MessagingDialog({
+  isOpen,
+  onClose,
+  recipientName,
+  recipientId,
+  currentUserName,
+  currentUserId,
+  accessToken,
+}: MessagingDialogProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && recipientId) {
+      loadMessages();
+      setupSignalR();
+    }
+  }, [isOpen, recipientId]);
+
+  const setupSignalR = async () => {
+    try {
+      const connection = await startSignalRConnection(accessToken);
+      connection.on("newMessage", (message: Message) => {
+        if (message.senderId === recipientId || message.senderId === currentUserId) {
+          setMessages(prev => [...prev, message]);
+        }
+      });
+    } catch (err) {
+      console.error("SignalR setup error:", err);
+      toast.error("Failed to establish real-time connection");
+    }
+  };
+
+  const loadMessages = async () => {
+    if (!recipientId || !currentUserId) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/api/messages`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load messages");
+      }
+
+      const data = await response.json();
+      setMessages(data);
+    } catch (err) {
+      console.error("Error loading messages:", err);
+      toast.error("Failed to load messages");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !recipientId || !currentUserId) return;
+
+    setIsSending(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/api/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          recipientId,
+          content: newMessage.trim()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      setNewMessage("");
+    } catch (err) {
+      console.error("Error sending message:", err);
+      toast.error("Failed to send message");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Message {recipientName}</DialogTitle>
+          <DialogDescription>
+            Send a direct message to start a conversation
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col space-y-4">
+          <ScrollArea className="h-[300px] p-4 border rounded-md">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : (
+              <div className="flex flex-col space-y-4">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${
+                      message.senderId === currentUserId
+                        ? "justify-end"
+                        : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-lg p-3 ${
+                        message.senderId === currentUserId
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
+                      }`}
+                    >
+                      <p className="text-sm">{message.content}</p>
+                      <span className="text-xs opacity-50">
+                        {new Date(message.createdAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          <div className="flex space-x-2">
+            <Textarea
+              placeholder="Type your message..."
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+            />
+            <Button
+              size="icon"
+              onClick={sendMessage}
+              disabled={isSending || !newMessage.trim()}
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

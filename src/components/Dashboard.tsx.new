@@ -1,0 +1,438 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Activity, Users, FileText, Clock, Loader2 } from "lucide-react";
+import { createClient } from "../utils/supabase/client";
+import { toast } from "sonner";
+
+// Database types
+interface DashboardStats {
+  active_connections: number;
+  knowledge_items: number;
+  team_collaborations: number;
+  hours_saved: number;
+}
+
+interface HistoricalStats {
+  previous_connections: number;
+  previous_items: number;
+  previous_collaborations: number;
+  previous_hours: number;
+}
+
+// UI types
+interface StatsItem {
+  value: number;
+  percentage: number;
+}
+
+interface StatsData {
+  activeConnections: StatsItem;
+  knowledgeItems: StatsItem;
+  teamCollaborations: StatsItem;
+  hoursSaved: StatsItem;
+}
+
+interface TopicData {
+  title: string;
+  views: number;
+  trending: 'up' | 'down' | 'neutral';
+}
+
+interface ExpertData {
+  id: string;
+  name: string;
+  role: string;
+  avatar: string;
+  skills: string[];
+  reason: string;
+}
+
+interface ActivityData {
+  id: string;
+  user: string;
+  action: string;
+  topic: string;
+  timestamp: string;
+  type: string;
+}
+
+interface DashboardProps {
+  accessToken: string;
+}
+
+export function Dashboard({ accessToken }: DashboardProps) {
+  const [stats, setStats] = useState<StatsData>({
+    activeConnections: { value: 0, percentage: 0 },
+    knowledgeItems: { value: 0, percentage: 0 },
+    teamCollaborations: { value: 0, percentage: 0 },
+    hoursSaved: { value: 0, percentage: 0 }
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [trendingTopics, setTrendingTopics] = useState<TopicData[]>([]);
+  const [suggestedExperts, setSuggestedExperts] = useState<ExpertData[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityData[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const supabase = createClient();
+
+        // Fetch real-time dashboard stats
+        const { data: dashboardData, error: statsError } = await supabase
+          .rpc('get_dashboard_stats');
+
+        if (statsError) {
+          throw new Error(`Failed to fetch dashboard stats: ${statsError.message}`);
+        }
+
+        if (dashboardData) {
+          const current = dashboardData.current;
+          const previous = dashboardData.previous;
+
+          setStats({
+            activeConnections: {
+              value: current.active_connections,
+              percentage: calculatePercentageChange(previous.active_connections, current.active_connections)
+            },
+            knowledgeItems: {
+              value: current.knowledge_items,
+              percentage: calculatePercentageChange(previous.knowledge_items, current.knowledge_items)
+            },
+            teamCollaborations: {
+              value: current.team_collaborations,
+              percentage: calculatePercentageChange(previous.team_collaborations, current.team_collaborations)
+            },
+            hoursSaved: {
+              value: current.hours_saved,
+              percentage: calculatePercentageChange(previous.hours_saved, current.hours_saved)
+            }
+          });
+        }
+
+        // Fetch trending topics
+        const { data: topicsData, error: topicsError } = await supabase
+          .rpc('get_trending_topics');
+
+        if (topicsError) {
+          throw new Error(`Failed to fetch trending topics: ${topicsError.message}`);
+        }
+
+        setTrendingTopics(topicsData || []);
+
+        // Fetch recent activity
+        const { data: activityData, error: activityError } = await supabase
+          .rpc('get_recent_activity');
+
+        if (activityError) {
+          throw new Error(`Failed to fetch recent activity: ${activityError.message}`);
+        }
+
+        if (activityData) {
+          setRecentActivity(
+            activityData.map((activity: any) => ({
+              ...activity,
+              timestamp: formatRelativeTime(activity.timestamp)
+            }))
+          );
+        }
+
+        // Fetch suggested experts
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data: expertsData, error: expertsError } = await supabase
+            .rpc('get_suggested_experts', { user_id: user.id });
+
+          if (expertsError) {
+            throw new Error(`Failed to fetch suggested experts: ${expertsError.message}`);
+          }
+
+          setSuggestedExperts(expertsData || []);
+        }
+
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to load dashboard data';
+        console.error('Error fetching dashboard data:', error);
+        toast.error(message);
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+
+    // Set up real-time subscriptions
+    const supabase = createClient();
+    
+    // Subscribe to knowledge items changes
+    const knowledgeSubscription = supabase
+      .channel('knowledge_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'knowledge_items'
+        },
+        () => {
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to activity changes
+    const activitySubscription = supabase
+      .channel('activity_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'activity_log'
+        },
+        () => {
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions
+    return () => {
+      knowledgeSubscription.unsubscribe();
+      activitySubscription.unsubscribe();
+    };
+  }, [accessToken]);
+
+  const calculatePercentageChange = (previous: number, current: number) => {
+    if (previous === 0) return 0;
+    return Math.round(((current - previous) / previous) * 100);
+  };
+
+  const formatRelativeTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  };
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        </div>
+      ) : (
+        <>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Active Connections</p>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-slate-900 dark:text-slate-100">{stats.activeConnections.value}</span>
+                      <span className="text-green-600 dark:text-green-400 text-sm">+{stats.activeConnections.percentage}%</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 text-blue-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <Users className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Knowledge Items</p>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-slate-900 dark:text-slate-100">{stats.knowledgeItems.value}</span>
+                      <span className="text-green-600 dark:text-green-400 text-sm">+{stats.knowledgeItems.percentage}%</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 text-purple-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-purple-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Team Collaborations</p>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-slate-900 dark:text-slate-100">{stats.teamCollaborations.value}</span>
+                      <span className="text-green-600 dark:text-green-400 text-sm">+{stats.teamCollaborations.percentage}%</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 text-cyan-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <Activity className="w-6 h-6 text-cyan-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Hours Saved</p>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-slate-900 dark:text-slate-100">{stats.hoursSaved.value}</span>
+                      <span className="text-green-600 dark:text-green-400 text-sm">+{stats.hoursSaved.percentage}%</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 text-green-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Activity and Trending Topics */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Recent Activity */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>Live updates from across your organization</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentActivity.map((activity) => (
+                    <div 
+                      key={activity.id} 
+                      className="flex items-start gap-3 pb-4 border-b dark:border-slate-700 last:border-0 last:pb-0"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-sm">
+                          {activity.user.split(' ').map(n => n[0]).join('')}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-slate-700 dark:text-slate-300">
+                          <span>{activity.action}</span>
+                          {' '}
+                          <span className="text-slate-900 dark:text-slate-100">{activity.topic}</span>
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-xs">{activity.type}</Badge>
+                          <span className="text-slate-400 dark:text-slate-500 text-xs">{activity.timestamp}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Trending Topics */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Trending Topics</CardTitle>
+                <CardDescription>Popular across teams</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {trendingTopics.map((topic, index) => (
+                    <div
+                      key={topic.title}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-600 dark:text-slate-400">{index + 1}.</span>
+                        <span className="text-slate-900 dark:text-slate-100">{topic.title}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500 dark:text-slate-400 text-sm">{topic.views}</span>
+                        <Activity
+                          className={`w-4 h-4 ${
+                            topic.trending === 'up'
+                              ? 'text-green-600 dark:text-green-400'
+                              : topic.trending === 'down'
+                              ? 'text-red-600 dark:text-red-400 rotate-180'
+                              : 'text-slate-400'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Suggested Connections */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Suggested Connections</CardTitle>
+              <CardDescription>People who might help with your current work</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {suggestedExperts.map((expert) => (
+                  <div
+                    key={expert.id}
+                    className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white">{expert.avatar}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-slate-900 dark:text-slate-100">{expert.name}</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">{expert.role}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {expert.skills.map((skill) => (
+                        <Badge key={skill} variant="secondary" className="text-xs">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-3">{expert.reason}</p>
+                    <button className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background text-foreground hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 w-full">
+                      Connect
+                      <Activity className="w-4 h-4 ml-2" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}

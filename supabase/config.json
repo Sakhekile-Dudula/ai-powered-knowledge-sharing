@@ -1,0 +1,8 @@
+{
+  "project_id": "wxskmnsiztrxsnlyglsu",
+  "functions": {
+    "serve": {
+      "port": 54321
+    }
+  }
+}

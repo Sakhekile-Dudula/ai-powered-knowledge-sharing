@@ -1,0 +1,143 @@
+﻿import { useState } from "react";import { useState } from "react";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+
+import { Button } from "./ui/button";import { Button } from "./ui/button";
+
+import { useMsal } from "@azure/msal-react";import { useMsal } from "@azure/msal-react";
+
+import { loginRequest } from "../utils/authConfig";import { loginRequest } from "../utils/authConfig";
+
+import { Brain } from "lucide-react";import { Brain } from "lucide-react";
+
+
+
+interface AuthProps {interface AuthProps {
+
+  onAuthSuccess: (account: any) => void;  onAuthSuccess: (account: any) => void;
+
+}}
+
+
+
+export function Auth({ onAuthSuccess }: AuthProps) {export function Auth({ onAuthSuccess }: AuthProps) {
+
+  const { instance } = useMsal();  const { instance } = useMsal();
+
+  const [isLoading, setIsLoading] = useState(false);  const [isLoading, setIsLoading] = useState(false);
+
+
+
+  const handleLogin = async () => {  const handleLogin = async () => {
+
+    setIsLoading(true);    setIsLoading(true);
+
+    try {    try {
+
+      const response = await instance.loginPopup(loginRequest);      const response = await instance.loginPopup(loginRequest);
+
+      if (response?.account) {      if (response?.account) {
+
+        onAuthSuccess(response.account);        onAuthSuccess(response.account);
+
+      }      }
+
+    } catch (err) {    } catch (err) {
+
+      console.error("Login failed:", err);      console.error("Login failed:", err);
+
+    } finally {    } finally {
+
+      setIsLoading(false);      setIsLoading(false);
+
+    }    }
+
+  };  };
+
+
+
+  return (  return (
+
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">
+
+      <div className="w-full max-w-md">      <div className="w-full max-w-md">
+
+        <Card className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">        <Card className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">
+
+          <div data-slot="card-header" className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 pt-6 text-center">          <div data-slot="card-header" className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 pt-6 text-center">
+
+            <div className="flex justify-center mb-4">            <div className="flex justify-center mb-4">
+
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
+
+                <Brain className="w-10 h-10 text-white" aria-hidden="true" />                <Brain className="w-10 h-10 text-white" aria-hidden="true" />
+
+              </div>              </div>
+
+            </div>            </div>
+
+            <h4 className="leading-none">MRI Synapse</h4>            <h4 className="leading-none">MRI Synapse</h4>
+
+            <p className="text-muted-foreground">Cross-Team Intelligence Hub</p>            <p className="text-muted-foreground">Cross-Team Intelligence Hub</p>
+
+          </div>          </div>
+
+
+
+          <div data-slot="card-content" className="px-6 pb-6">          <div data-slot="card-content" className="px-6 pb-6">
+
+            <div className="flex flex-col gap-4">            <div className="flex flex-col gap-4">
+
+              <CardDescription className="text-center">              <CardDescription className="text-center">
+
+                Sign in with your Microsoft account to access the platform                Sign in with your Microsoft account to access the platform
+
+              </CardDescription>              </CardDescription>
+
+              <Button              <Button
+
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full"                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full"
+
+                onClick={handleLogin}                onClick={handleLogin}
+
+                disabled={isLoading}                disabled={isLoading}
+
+              >              >
+
+                {isLoading ? (                {isLoading ? (
+
+                  <span className="flex items-center gap-2">                  <span className="flex items-center gap-2">
+
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+
+                    </svg>                    </svg>
+
+                    Signing in...                    Signing in...
+
+                  </span>                  </span>
+
+                ) : (                ) : (
+
+                  "Sign in with Microsoft"                  "Sign in with Microsoft"
+
+                )}                )}
+
+              </Button>              </Button>
+
+            </div>            </div>
+
+          </div>          </div>
+
+        </Card>        </Card>
+
+      </div>      </div>
+
+    </div>    </div>
+
+  );  );
+
+}}

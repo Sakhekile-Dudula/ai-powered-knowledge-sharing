@@ -1,0 +1,550 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Activity, Users, FileText, Clock, Loader2 } from "lucide-react";
+import { createClient } from "../lib/supabase";
+import { toast } from "sonner";
+
+// Define interfaces for better type safety
+interface StatsItem {
+  value: number;
+  percentage: number;
+}
+
+interface StatsData {
+  activeConnections: StatsItem;
+  knowledgeItems: StatsItem;
+  teamCollaborations: StatsItem;
+  hoursSaved: StatsItem;
+}
+
+interface DashboardProps {
+  accessToken: string;
+}
+
+export function Dashboard({ accessToken }: DashboardProps) {
+  const [stats, setStats] = useState<StatsData>({
+    activeConnections: { value: 0, percentage: 0 },
+    knowledgeItems: { value: 0, percentage: 0 },
+    teamCollaborations: { value: 0, percentage: 0 },
+    hoursSaved: { value: 0, percentage: 0 }
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [trendingTopics, setTrendingTopics] = useState<Array<{ title: string; views: number; trending: 'up' | 'down' | 'neutral' }>>([]);
+  const [suggestedExperts, setSuggestedExperts] = useState<Array<{
+    name: string;
+    role: string;
+    avatar: string;
+    skills: string[];
+    reason: string;
+    id: string;
+  }>>([]);
+  const [recentActivity, setRecentActivity] = useState<Array<{
+    id: string;
+    user: string;
+    action: string;
+    topic: string;
+    timestamp: string;
+    type: string;
+  }>>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        const supabase = createClient();
+
+        // Fetch stats
+        const { data: statsData, error: statsError } = await supabase
+          .rpc('get_dashboard_stats')
+          .single();
+
+        if (statsError) throw statsError;
+
+        // Calculate percentage changes from historical data
+        const { data: historicalStats, error: historicalError } = await supabase
+          .rpc('get_historical_stats')
+          .single();
+
+        if (historicalError) throw historicalError;
+
+        setStats({
+          activeConnections: {
+            value: statsData.active_connections || 0,
+            percentage: calculatePercentageChange(
+              historicalStats.previous_connections,
+              statsData.active_connections
+            ),
+          },
+          knowledgeItems: {
+            value: statsData.knowledge_items || 0,
+            percentage: calculatePercentageChange(
+              historicalStats.previous_items,
+              statsData.knowledge_items
+            ),
+          },
+          teamCollaborations: {
+            value: statsData.team_collaborations || 0,
+            percentage: calculatePercentageChange(
+              historicalStats.previous_collaborations,
+              statsData.team_collaborations
+            ),
+          },
+          hoursSaved: {
+            value: statsData.hours_saved || 0,
+            percentage: calculatePercentageChange(
+              historicalStats.previous_hours,
+              statsData.hours_saved
+            ),
+          },
+        });
+
+        // Fetch trending topics
+        const { data: topicsData, error: topicsError } = await supabase
+          .from('topics')
+          .select('*')
+          .order('views', { ascending: false })
+          .limit(5);
+
+        if (topicsError) throw topicsError;
+
+        setTrendingTopics(
+          topicsData.map(topic => ({
+            title: topic.title,
+            views: topic.views,
+            trending: determineTrend(topic.previous_views, topic.views)
+          }))
+        );
+
+        // Fetch recent activity
+        const { data: activityData, error: activityError } = await supabase
+          .from('activity_log')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (activityError) throw activityError;
+
+        setRecentActivity(
+          activityData.map(activity => ({
+            id: activity.id,
+            user: activity.user_name,
+            action: activity.action,
+            topic: activity.topic,
+            timestamp: formatRelativeTime(activity.created_at),
+            type: activity.type
+          }))
+        );
+
+        // Fetch suggested experts
+        const { data: expertsData, error: expertsError } = await supabase
+          .rpc('get_suggested_experts', { user_id: supabase.auth.user()?.id })
+          .limit(3);
+
+        if (expertsError) throw expertsError;
+
+        setSuggestedExperts(expertsData);
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [accessToken]);
+
+  const calculatePercentageChange = (previous: number, current: number) => {
+    if (previous === 0) return 0;
+    return Math.round(((current - previous) / previous) * 100);
+  };
+
+  const determineTrend = (previous: number, current: number): 'up' | 'down' | 'neutral' => {
+    if (current > previous) return 'up';
+    if (current < previous) return 'down';
+    return 'neutral';
+  };
+
+  const formatRelativeTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  };
+
+  const [suggestedExperts] = useState([
+    {
+      name: 'Emma Davis',
+      role: 'Senior Architect',
+      avatar: 'ED',
+      skills: ['System Design', 'Scalability'],
+      reason: 'Working on similar projects'
+    },
+    {
+      name: 'Ryan Kumar',
+      role: 'Tech Lead',
+      avatar: 'RK',
+      skills: ['Frontend', 'React'],
+      reason: 'Solved similar problems'
+    },
+    {
+      name: 'Sophie Anderson',
+      role: 'Product Manager',
+      avatar: 'SA',
+      skills: ['Roadmap Planning', 'Strategy'],
+      reason: 'Complementary skills'
+    }
+  ]);
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Active Connections</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-slate-900 dark:text-slate-100">{stats.activeConnections.value}</span>
+                  <span className="text-green-600 dark:text-green-400 text-sm">+{stats.activeConnections.percentage}%</span>
+                </div>
+              </div>
+              <div className="w-12 h-12 text-blue-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Knowledge Items</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-slate-900 dark:text-slate-100">{stats.knowledgeItems.value}</span>
+                  <span className="text-green-600 dark:text-green-400 text-sm">+{stats.knowledgeItems.percentage}%</span>
+                </div>
+              </div>
+              <div className="w-12 h-12 text-purple-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
+                <FileText className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Team Collaborations</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-slate-900 dark:text-slate-100">{stats.teamCollaborations.value}</span>
+                  <span className="text-green-600 dark:text-green-400 text-sm">+{stats.teamCollaborations.percentage}%</span>
+                </div>
+              </div>
+              <div className="w-12 h-12 text-cyan-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
+                <Activity className="w-6 h-6 text-cyan-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Hours Saved</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-slate-900 dark:text-slate-100">{stats.hoursSaved.value}</span>
+                  <span className="text-green-600 dark:text-green-400 text-sm">+{stats.hoursSaved.percentage}%</span>
+                </div>
+              </div>
+              <div className="w-12 h-12 text-green-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
+                <Clock className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Activity and Trending Topics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Activity */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>Live updates from across your organization</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 pb-4 border-b dark:border-slate-700 last:border-0 last:pb-0">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-sm">WtMS</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-700 dark:text-slate-300">
+                    <span>Welcome to MRI Synapse</span> Start by{' '}
+                    <span className="text-slate-900 dark:text-slate-100">adding knowledge items or creating projects</span>
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="secondary" className="text-xs">Platform</Badge>
+                    <span className="text-slate-400 dark:text-slate-500 text-xs">now</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Trending Topics */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Trending Topics</CardTitle>
+            <CardDescription>Popular across teams</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {trendingTopics.map((topic, index) => (
+                <div
+                  key={topic.title}
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-600 dark:text-slate-400">{index + 1}.</span>
+                    <span className="text-slate-900 dark:text-slate-100">{topic.title}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500 dark:text-slate-400 text-sm">{topic.views}</span>
+                    <Activity
+                      className={`w-4 h-4 ${
+                        topic.trending === 'up'
+                          ? 'text-green-600 dark:text-green-400'
+                          : topic.trending === 'down'
+                          ? 'text-red-600 dark:text-red-400 rotate-180'
+                          : 'text-slate-400'
+                      }`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Suggested Connections */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Suggested Connections</CardTitle>
+          <CardDescription>People who might help with your current work</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {suggestedExperts.map((expert) => (
+              <div
+                key={expert.name}
+                className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white">{expert.avatar}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-900 dark:text-slate-100">{expert.name}</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">{expert.role}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {expert.skills.map((skill) => (
+                    <Badge key={skill} variant="secondary" className="text-xs">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-3">{expert.reason}</p>
+                <button className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background text-foreground hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 w-full">
+                  Connect
+                  <Activity className="w-4 h-4 ml-2" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+    setIsLoading(true);
+    try {
+      const statsUrl = `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/dashboard/stats`;
+      const activityUrl = `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/dashboard/activity`;
+      
+      console.log("Attempting to fetch from URLs:", {
+        statsUrl,
+        activityUrl
+      });
+
+      const headers = {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      };
+
+      console.log("Using headers:", {
+        Authorization: `Bearer ${accessToken.substring(0, 10)}...`,
+        'Content-Type': headers['Content-Type']
+      });
+
+      const [statsRes, activityRes] = await Promise.all([
+        fetch(statsUrl, { headers }),
+        fetch(activityUrl, { headers })
+      ]);
+
+      console.log("Response status codes:", {
+        stats: statsRes.status,
+        activity: activityRes.status
+      });
+
+      if (!statsRes.ok || !activityRes.ok) {
+        let errorDetails = {
+          stats: {
+            status: statsRes.status,
+            statusText: statsRes.statusText,
+            body: await statsRes.text().catch(() => "Could not read body")
+          },
+          activity: {
+            status: activityRes.status,
+            statusText: activityRes.statusText,
+            body: await activityRes.text().catch(() => "Could not read body")
+          }
+        };
+        
+        console.error("API Error Details:", errorDetails);
+        throw new Error(`API calls failed. Stats: ${statsRes.status}, Activity: ${activityRes.status}`);
+      }
+
+      const statsData = await statsRes.json();
+      const activityData = await activityRes.json();
+
+      console.log("Received data:", {
+        stats: statsData,
+        activity: activityData
+      });
+
+      if (!statsData.stats || !activityData.activity) {
+        console.error("Invalid data structure received:", { statsData, activityData });
+        throw new Error("Invalid data structure received from API");
+      }
+
+      setStats(statsData.stats);
+      setActivity(activityData.activity);
+    } catch (error) {
+      console.error("Detailed fetch error:", error);
+      if (error instanceof Error) {
+        toast.error(`Failed to load dashboard data: ${error.message}`);
+      } else {
+        toast.error("Failed to load dashboard data. Please check your connection.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Helper function to determine the color class based on percentage value
+  const getPercentageClass = (item?: StatsItem) => 
+    item?.percentage && item.percentage > 0 ? 'text-green-500' : 'text-red-500';
+
+  // Helper function to format the percentage value
+  const formatPercentage = (item?: StatsItem) => {
+    if (!item?.percentage) return '0%';
+    return `${item.percentage > 0 ? '+' : ''}${item.percentage}%`;
+  };
+
+  // Component to render a stats card
+  const renderStatsCard = (
+    title: string,
+    icon: JSX.Element,
+    statsItem?: StatsItem
+  ) => (
+    <Card className="border rounded-lg shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-base font-medium text-gray-600">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent className="pt-2">
+        <div className="flex items-baseline justify-between">
+          <div className="text-3xl font-semibold">{statsItem?.value || 0}</div>
+          <div className={`text-sm font-medium ${getPercentageClass(statsItem)}`}>
+            {formatPercentage(statsItem)}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="h-full flex flex-col">
+      <Header email="sakhekile.dudula@mrisoftware.com" />
+      <div className="p-6 space-y-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {renderStatsCard(
+            "Active Connections",
+            <Users className="h-5 w-5 text-blue-500" />,
+            stats?.activeConnections
+          )}
+          {renderStatsCard(
+            "Knowledge Items",
+            <FileText className="h-5 w-5 text-purple-500" />,
+            stats?.knowledgeItems
+          )}
+          {renderStatsCard(
+            "Team Collaborations",
+            <Activity className="h-5 w-5 text-indigo-500" />,
+            stats?.teamCollaborations
+          )}
+          {renderStatsCard(
+            "Hours Saved",
+            <Clock className="h-5 w-5 text-green-500" />,
+            stats?.hoursSaved
+          )}
+        </div>
+
+        {/* Activity Section */}
+        <Card className="col-span-full">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>Your team's latest interactions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[300px]">
+              {activity.map((item, index) => (
+                <div key={index} className="mb-4 grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0">
+                  <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{item.action}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.user} • {item.topic} • {item.time}
+                    </p>
+                    <Badge variant="outline">{item.team}</Badge>
+                  </div>
+                </div>
+              ))}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      {isLoading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-background/80">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      )}
+    </div>
+  );
+}

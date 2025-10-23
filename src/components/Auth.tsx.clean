@@ -1,0 +1,236 @@
+import { useState } from 'react';
+import { Brain } from "lucide-react";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { createClient } from "@supabase/supabase-js";
+
+interface AuthProps {
+  onAuthSuccess: (account: any) => void;
+}
+
+interface SignUpFormData {
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+  team: string;
+  expertise: string;
+}
+
+export function Auth({ onAuthSuccess }: AuthProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [signUpData, setSignUpData] = useState<SignUpFormData>({
+    name: "",
+    email: "",
+    password: "",
+    role: "",
+    team: "",
+    expertise: ""
+  });
+
+  const handleLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Implement login logic here
+      // For now just show loading state
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock successful login
+      onAuthSuccess({
+        email: signUpData.email
+      });
+    } catch (err) {
+      console.error("Login failed:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    setIsLoading(true);
+    try {
+      // Implement signup logic here
+      // For now just show loading state
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Mock successful signup
+      onAuthSuccess({
+        email: signUpData.email,
+        ...signUpData
+      });
+    } catch (err) {
+      console.error("Sign up failed:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignUpInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignUpData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">
+          <div className="flex justify-center mb-4 pt-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
+              <Brain className="w-8 h-8 text-white" />
+            </div>
+          </div>
+          <div className="text-center">
+            <h4 className="leading-none">MRI Synapse</h4>
+            <p className="text-muted-foreground">Cross-Team Intelligence Hub</p>
+          </div>
+          
+          <div data-slot="card-content" className="px-6 [&:last-child]:pb-6">
+            <Tabs defaultValue="signin" className="flex flex-col gap-2">
+              <TabsList className="w-full">
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="signin" className="mt-4">
+                <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">Email</Label>
+                      <Input
+                        id="signin-email"
+                        name="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        required
+                        value={signUpData.email}
+                        onChange={handleSignUpInputChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-password">Password</Label>
+                      <Input
+                        id="signin-password"
+                        name="password"
+                        type="password"
+                        required
+                        placeholder="Enter your password"
+                        value={signUpData.password}
+                        onChange={handleSignUpInputChange}
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center gap-2">
+                          Signing in...
+                        </span>
+                      ) : (
+                        "Sign In"
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="signup" className="mt-4">
+                <form onSubmit={(e) => { e.preventDefault(); handleSignUp(); }}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        placeholder="Enter your full name"
+                        required
+                        value={signUpData.name}
+                        onChange={handleSignUpInputChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        required
+                        value={signUpData.email}
+                        onChange={handleSignUpInputChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="Create a password"
+                        required
+                        value={signUpData.password}
+                        onChange={handleSignUpInputChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Role</Label>
+                      <Input
+                        id="role"
+                        name="role"
+                        placeholder="Enter your role"
+                        required
+                        value={signUpData.role}
+                        onChange={handleSignUpInputChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="team">Team</Label>
+                      <Input
+                        id="team"
+                        name="team"
+                        placeholder="Enter your team"
+                        required
+                        value={signUpData.team}
+                        onChange={handleSignUpInputChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="expertise">Area of Expertise</Label>
+                      <Input
+                        id="expertise"
+                        name="expertise"
+                        placeholder="Enter your area of expertise"
+                        required
+                        value={signUpData.expertise}
+                        onChange={handleSignUpInputChange}
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center gap-2">
+                          Creating account...
+                        </span>
+                      ) : (
+                        "Create Account"
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
