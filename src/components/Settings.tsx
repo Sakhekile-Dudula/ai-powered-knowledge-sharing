@@ -18,6 +18,7 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [updateCounter, setUpdateCounter] = useState(0);
   const [notifications, setNotifications] = useState({
     email: true,
     push: false,
@@ -174,6 +175,7 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
     console.log('Toggling notification:', key, 'from', notifications[key], 'to', !notifications[key]);
     const newNotifications = { ...notifications, [key]: !notifications[key] };
     setNotifications(newNotifications);
+    setUpdateCounter(prev => prev + 1);
     localStorage.setItem('notifications', JSON.stringify(newNotifications));
     toast.success(`${key} notifications ${newNotifications[key] ? 'enabled' : 'disabled'}`);
   };
@@ -342,11 +344,14 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
                   <Label>Email Notifications</Label>
                   <p className="text-sm text-muted-foreground">Receive email updates</p>
                 </div>
-                <Switch
-                  key={`email-${notifications.email}`}
-                  checked={notifications.email}
-                  onCheckedChange={() => handleNotificationChange('email')}
-                />
+                <div>
+                  <Switch
+                    key={`email-${notifications.email}-${updateCounter}`}
+                    checked={notifications.email}
+                    onCheckedChange={() => handleNotificationChange('email')}
+                  />
+                  <span className="ml-2 text-xs">{notifications.email ? 'ON' : 'OFF'}</span>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
@@ -354,11 +359,14 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
                   <Label>Push Notifications</Label>
                   <p className="text-sm text-muted-foreground">Browser push notifications</p>
                 </div>
-                <Switch
-                  key={`push-${notifications.push}`}
-                  checked={notifications.push}
-                  onCheckedChange={() => handleNotificationChange('push')}
-                />
+                <div>
+                  <Switch
+                    key={`push-${notifications.push}-${updateCounter}`}
+                    checked={notifications.push}
+                    onCheckedChange={() => handleNotificationChange('push')}
+                  />
+                  <span className="ml-2 text-xs">{notifications.push ? 'ON' : 'OFF'}</span>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
@@ -366,11 +374,14 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
                   <Label>Messages</Label>
                   <p className="text-sm text-muted-foreground">Notify when you receive messages</p>
                 </div>
-                <Switch
-                  key={`messages-${notifications.messages}`}
-                  checked={notifications.messages}
-                  onCheckedChange={() => handleNotificationChange('messages')}
-                />
+                <div>
+                  <Switch
+                    key={`messages-${notifications.messages}-${updateCounter}`}
+                    checked={notifications.messages}
+                    onCheckedChange={() => handleNotificationChange('messages')}
+                  />
+                  <span className="ml-2 text-xs">{notifications.messages ? 'ON' : 'OFF'}</span>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
@@ -378,11 +389,14 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
                   <Label>Mentions</Label>
                   <p className="text-sm text-muted-foreground">Notify when someone mentions you</p>
                 </div>
-                <Switch
-                  key={`mentions-${notifications.mentions}`}
-                  checked={notifications.mentions}
-                  onCheckedChange={() => handleNotificationChange('mentions')}
-                />
+                <div>
+                  <Switch
+                    key={`mentions-${notifications.mentions}-${updateCounter}`}
+                    checked={notifications.mentions}
+                    onCheckedChange={() => handleNotificationChange('mentions')}
+                  />
+                  <span className="ml-2 text-xs">{notifications.mentions ? 'ON' : 'OFF'}</span>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
@@ -390,11 +404,14 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
                   <Label>Updates</Label>
                   <p className="text-sm text-muted-foreground">Platform updates and announcements</p>
                 </div>
-                <Switch
-                  key={`updates-${notifications.updates}`}
-                  checked={notifications.updates}
-                  onCheckedChange={() => handleNotificationChange('updates')}
-                />
+                <div>
+                  <Switch
+                    key={`updates-${notifications.updates}-${updateCounter}`}
+                    checked={notifications.updates}
+                    onCheckedChange={() => handleNotificationChange('updates')}
+                  />
+                  <span className="ml-2 text-xs">{notifications.updates ? 'ON' : 'OFF'}</span>
+                </div>
               </div>
             </div>
           </Card>
