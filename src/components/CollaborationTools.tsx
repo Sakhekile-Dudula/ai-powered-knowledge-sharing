@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Video, Calendar, FileEdit, Users, Clock, Phone, Share2, Check, X } from 'lucide-react';
+import { Video, Calendar, FileEdit, Users, Clock, Phone, Share2, Check, X, MessageSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from 'sonner';
+import { startTeamsCall, startTeamsChat, openTeams } from '../utils/teamsIntegration';
 
 interface CollaborationToolsProps {
   user: any;
@@ -92,17 +93,27 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
 
   const joinOfficeHours = (officeHour: OfficeHour) => {
     toast.success(`Joined ${officeHour.expert_name}'s office hours!`);
-    toast.info('Meeting link will be sent to your email');
+    // Start a Teams call with the expert
+    setTimeout(() => {
+      startTeamsCall([officeHour.expert_name]);
+      toast.info('Opening Microsoft Teams...');
+    }, 500);
   };
 
   const startVideoCall = () => {
-    toast.info('Opening video call... (Integration with Zoom/Teams/Google Meet)');
-    // This would integrate with video conferencing APIs
+    startTeamsCall();
+    toast.success('Starting Microsoft Teams call...');
+  };
+
+  const startChat = () => {
+    startTeamsChat();
+    toast.success('Opening Microsoft Teams chat...');
   };
 
   const shareScreen = () => {
-    toast.info('Screen sharing initiated... (Requires browser permissions)');
-    // This would use WebRTC screen sharing API
+    // Teams call with screen sharing hint
+    openTeams({ type: 'call' });
+    toast.info('Opening Teams - you can share your screen once in the call');
   };
 
   const createCollabRequest = () => {
@@ -227,13 +238,25 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="p-6 border bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
                 <Video className="w-12 h-12 text-blue-600 mb-4" />
-                <h3 className="font-semibold mb-2">Start Video Call</h3>
+                <h3 className="font-semibold mb-2">Start Teams Call</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Launch an instant video meeting with team members
+                  Launch an instant Microsoft Teams video call
                 </p>
                 <Button onClick={startVideoCall} className="w-full">
                   <Video className="w-4 h-4 mr-2" />
-                  Start Call
+                  Start Teams Call
+                </Button>
+              </Card>
+
+              <Card className="p-6 border bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950">
+                <MessageSquare className="w-12 h-12 text-emerald-600 mb-4" />
+                <h3 className="font-semibold mb-2">Start Teams Chat</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Open a Microsoft Teams chat conversation
+                </p>
+                <Button onClick={startChat} className="w-full" variant="outline">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Start Chat
                 </Button>
               </Card>
 
@@ -241,7 +264,7 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
                 <Share2 className="w-12 h-12 text-purple-600 mb-4" />
                 <h3 className="font-semibold mb-2">Share Screen</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Share your screen for presentations or demos
+                  Share your screen in Microsoft Teams
                 </p>
                 <Button onClick={shareScreen} className="w-full" variant="outline">
                   <Share2 className="w-4 h-4 mr-2" />
@@ -253,27 +276,24 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
                 <Phone className="w-12 h-12 text-green-600 mb-4" />
                 <h3 className="font-semibold mb-2">Join Meeting</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Enter a meeting code to join
+                  Enter a Teams meeting link to join
                 </p>
                 <div className="flex gap-2">
-                  <Input placeholder="Meeting code" />
+                  <Input placeholder="Teams meeting URL" />
                   <Button>Join</Button>
                 </div>
               </Card>
+            </div>
 
-              <Card className="p-6 border">
-                <h3 className="font-semibold mb-3">Recent Meetings</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
-                    <span>Team Standup</span>
-                    <span className="text-muted-foreground">2 hours ago</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
-                    <span>Code Review</span>
-                    <span className="text-muted-foreground">Yesterday</span>
-                  </div>
-                </div>
-              </Card>
+            <div className="mt-6 p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/20">
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <Video className="w-5 h-5 text-blue-600" />
+                Microsoft Teams Integration
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                This app integrates directly with Microsoft Teams. Clicking any call or chat button will open Microsoft Teams on your device.
+                Make sure you have Teams installed or it will open in your browser.
+              </p>
             </div>
           </Card>
         </TabsContent>
