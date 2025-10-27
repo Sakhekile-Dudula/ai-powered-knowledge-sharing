@@ -132,11 +132,11 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
       </div>
 
       <Tabs defaultValue="office-hours" className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full max-w-4xl">
-          <TabsTrigger value="office-hours">Office Hours</TabsTrigger>
-          <TabsTrigger value="video-chat">Video Chat</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="requests">Requests</TabsTrigger>
+        <TabsList className="grid grid-cols-4 w-full max-w-4xl bg-muted p-1 rounded-lg">
+          <TabsTrigger value="office-hours" className="rounded-md">Office Hours</TabsTrigger>
+          <TabsTrigger value="video-chat" className="rounded-md">Video Chat</TabsTrigger>
+          <TabsTrigger value="documents" className="rounded-md">Documents</TabsTrigger>
+          <TabsTrigger value="requests" className="rounded-md">Requests</TabsTrigger>
         </TabsList>
 
         {/* Office Hours Tab */}
