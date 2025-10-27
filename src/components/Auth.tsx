@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Brain, Upload, User, Mail, Lock, Briefcase, Users, Sparkles, Building2 } from "lucide-react";
+import { Brain, User, Mail, Lock, Briefcase, Users, Sparkles, Building2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
@@ -247,17 +247,11 @@ export function Auth({ onAuthSuccess }: AuthProps) {
 
               <TabsContent value="signup" className="mt-4 space-y-4">
                 <form onSubmit={(e) => { e.preventDefault(); handleSignUp(); }} className="space-y-4">
-                  {/* Avatar Placeholder */}
-                  <div className="flex flex-col items-center py-4 space-y-2">
-                    <div className="relative">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-semibold">
-                        <User className="w-10 h-10" />
-                      </div>
-                      <div className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white cursor-pointer hover:bg-blue-700 transition-colors">
-                        <Upload className="w-4 h-4 text-white" />
-                      </div>
+                  {/* Avatar */}
+                  <div className="flex justify-center py-3">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                      <User className="w-8 h-8 text-white" />
                     </div>
-                    <p className="text-xs text-muted-foreground">Profile picture (coming soon)</p>
                   </div>
 
                   <div className="space-y-4">
