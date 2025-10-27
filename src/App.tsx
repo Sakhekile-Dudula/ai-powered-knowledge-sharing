@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Brain, Search, Users, Network, MessageSquare, Lightbulb, Moon, LogOut, HelpCircle, Settings as SettingsIcon, Video } from "lucide-react";
+import { Brain, Search, Users, Network, MessageSquare, Lightbulb, Moon, LogOut, HelpCircle, Settings as SettingsIcon, Video, FileText, Sparkles } from "lucide-react";
 import { Auth } from "./components/Auth";
 import { Dashboard } from "./components/Dashboard";
 import { KnowledgeSearch } from "./components/KnowledgeSearch";
@@ -9,6 +9,8 @@ import { InsightsHub } from "./components/InsightsHub";
 import { Messages } from "./components/Messages";
 import { Settings } from "./components/Settings";
 import { CollaborationTools } from "./components/CollaborationTools";
+import KnowledgeQuality from "./components/KnowledgeQuality";
+import AIAssistant from "./components/AIAssistant";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
 import { createClient } from "./utils/supabase/client";
@@ -292,6 +294,26 @@ export default function App() {
             <Button
               type="button"
               role="tab"
+              variant={activeTab === "quality" ? "default" : "ghost"}
+              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
+              onClick={() => setActiveTab("quality")}
+            >
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">Quality</span>
+            </Button>
+            <Button
+              type="button"
+              role="tab"
+              variant={activeTab === "ai" ? "default" : "ghost"}
+              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
+              onClick={() => setActiveTab("ai")}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">AI</span>
+            </Button>
+            <Button
+              type="button"
+              role="tab"
               variant={activeTab === "settings" ? "default" : "ghost"}
               className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
               onClick={() => setActiveTab("settings")}
@@ -335,7 +357,13 @@ export default function App() {
         {activeTab === "collaboration" && userAccount && (
           <CollaborationTools user={userAccount} />
         )}
-        {activeTab === "settings" && userProfile && (
+        {activeTab === "quality" && (
+          <KnowledgeQuality />
+        )}
+        {activeTab === "ai" && (
+          <AIAssistant />
+        )}
+        {activeTab === "settings" && userAccount && (
           <Settings 
             user={userProfile}
             onProfileUpdate={(updatedProfile) => setUserProfile(updatedProfile)}
