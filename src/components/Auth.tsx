@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Brain, User, Mail, Lock, Briefcase, Users, Sparkles, Building2 } from "lucide-react";
+import { Brain, User, Mail, Lock, Briefcase, Users, Sparkles, Building2, Camera } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
@@ -23,6 +23,7 @@ interface SignUpFormData {
 
 export function Auth({ onAuthSuccess }: AuthProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [signUpData, setSignUpData] = useState<SignUpFormData>({
     full_name: "",
     email: "",
@@ -176,6 +177,30 @@ export function Auth({ onAuthSuccess }: AuthProps) {
     }));
   };
 
+  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image must be less than 5MB");
+        return;
+      }
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error("Please upload an image file");
+        return;
+      }
+
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePicture(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -247,11 +272,31 @@ export function Auth({ onAuthSuccess }: AuthProps) {
 
               <TabsContent value="signup" className="mt-4 space-y-4">
                 <form onSubmit={(e) => { e.preventDefault(); handleSignUp(); }} className="space-y-4">
-                  {/* Avatar */}
-                  <div className="flex justify-center py-3">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                      <User className="w-8 h-8 text-white" />
+                  {/* Avatar with Upload */}
+                  <div className="flex flex-col items-center py-3 space-y-2">
+                    <div className="relative group">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center overflow-hidden">
+                        {profilePicture ? (
+                          <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-10 h-10 text-white" />
+                        )}
+                      </div>
+                      <label 
+                        htmlFor="profile-picture-upload"
+                        className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        <Camera className="w-6 h-6 text-white" />
+                      </label>
+                      <input
+                        id="profile-picture-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfilePictureChange}
+                        className="hidden"
+                      />
                     </div>
+                    <p className="text-xs text-muted-foreground">Click to upload photo (optional)</p>
                   </div>
 
                   <div className="space-y-4">
