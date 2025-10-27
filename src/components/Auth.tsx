@@ -273,30 +273,28 @@ export function Auth({ onAuthSuccess }: AuthProps) {
               <TabsContent value="signup" className="mt-4 space-y-4">
                 <form onSubmit={(e) => { e.preventDefault(); handleSignUp(); }} className="space-y-4">
                   {/* Avatar with Upload */}
-                  <div className="flex flex-col items-center py-3 space-y-2">
-                    <div className="relative group">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center overflow-hidden">
+                  <div className="flex flex-col items-center py-2 space-y-2">
+                    <label htmlFor="profile-picture-upload" className="cursor-pointer">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center overflow-hidden hover:opacity-90 transition-opacity border-2 border-transparent hover:border-blue-300">
                         {profilePicture ? (
                           <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
-                          <User className="w-10 h-10 text-white" />
+                          <div className="flex flex-col items-center justify-center">
+                            <Camera className="w-8 h-8 text-white" />
+                          </div>
                         )}
                       </div>
-                      <label 
-                        htmlFor="profile-picture-upload"
-                        className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      >
-                        <Camera className="w-6 h-6 text-white" />
-                      </label>
-                      <input
-                        id="profile-picture-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleProfilePictureChange}
-                        className="hidden"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">Click to upload photo (optional)</p>
+                    </label>
+                    <input
+                      id="profile-picture-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProfilePictureChange}
+                      className="hidden"
+                    />
+                    <p className="text-xs text-muted-foreground text-center">
+                      {profilePicture ? "Change photo" : "Add photo (optional)"}
+                    </p>
                   </div>
 
                   <div className="space-y-4">
