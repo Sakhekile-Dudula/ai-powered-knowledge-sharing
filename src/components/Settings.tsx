@@ -42,17 +42,26 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
   });
 
   useEffect(() => {
-    // Check for dark mode preference
-    const darkMode = localStorage.getItem('darkMode') === 'true';
-    setIsDarkMode(darkMode);
-    if (darkMode) {
+    // Check for dark mode preference using the same key as App.tsx
+    const savedTheme = localStorage.getItem('theme');
+    const isDark = savedTheme === 'dark' || document.documentElement.classList.contains('dark');
+    setIsDarkMode(isDark);
+    
+    // Ensure the class is applied
+    if (isDark) {
       document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
 
     // Load notification preferences
     const savedNotifications = localStorage.getItem('notifications');
     if (savedNotifications) {
-      setNotifications(JSON.parse(savedNotifications));
+      try {
+        setNotifications(JSON.parse(savedNotifications));
+      } catch (e) {
+        console.error('Failed to parse notifications:', e);
+      }
     }
   }, []);
 
@@ -149,7 +158,8 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
     setIsDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode.toString());
+    // Use 'theme' key to match App.tsx
+    localStorage.setItem('theme', newDarkMode ? 'dark' : 'light');
     
     if (newDarkMode) {
       document.documentElement.classList.add('dark');
