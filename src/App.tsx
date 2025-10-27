@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { Brain, Search, Users, Network, MessageSquare, Lightbulb, Moon, LogOut, HelpCircle, Settings as SettingsIcon, Video, FileText } from "lucide-react";
+import { Brain, Users, Network, MessageSquare, Lightbulb, Moon, LogOut, HelpCircle, Settings as SettingsIcon, Video, FileText } from "lucide-react";
 import { Auth } from "./components/Auth";
 import { Dashboard } from "./components/Dashboard";
-import { KnowledgeSearch } from "./components/KnowledgeSearch";
 import { ExpertFinder } from "./components/ExpertFinder";
 import { ProjectConnections } from "./components/ProjectConnections";
 import { InsightsHub } from "./components/InsightsHub";
@@ -10,6 +9,7 @@ import { Messages } from "./components/Messages";
 import { Settings } from "./components/Settings";
 import { CollaborationTools } from "./components/CollaborationTools";
 import KnowledgeQuality from "./components/KnowledgeQuality";
+import { HeaderSearch } from "./components/HeaderSearch";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
 import { createClient } from "./utils/supabase/client";
@@ -152,17 +152,23 @@ export default function App() {
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 z-50 shadow-sm flex-shrink-0">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-shrink-0">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
                 <Brain className="w-6 h-6 text-white" />
               </div>
-              <div>
+              <div className="hidden md:block">
                 <h1 className="text-slate-900 dark:text-slate-100">MRI Synapse</h1>
                 <p className="text-slate-500 dark:text-slate-400 text-sm">Cross-Team Intelligence Hub</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            
+            {/* Search Bar in Center */}
+            <div className="flex-1 max-w-2xl mx-4">
+              <HeaderSearch accessToken={accessToken} />
+            </div>
+
+            <div className="flex items-center gap-3 flex-shrink-0">
               <div className="text-right hidden sm:block">
                 <p className="text-slate-700 dark:text-slate-300 text-sm">{userProfile?.full_name || userAccount.email}</p>
                 <p className="text-slate-500 dark:text-slate-400 text-xs">{userProfile?.role || 'User'}</p>
@@ -219,16 +225,6 @@ export default function App() {
             >
               <Brain className="w-4 h-4" />
               <span className="hidden sm:inline">Dashboard</span>
-            </Button>
-            <Button
-              type="button"
-              role="tab"
-              variant={activeTab === "search" ? "default" : "ghost"}
-              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
-              onClick={() => setActiveTab("search")}
-            >
-              <Search className="w-4 h-4" />
-              <span className="hidden sm:inline">Search</span>
             </Button>
             <Button
               type="button"
@@ -316,9 +312,6 @@ export default function App() {
         {/* Tab Content */}
         {activeTab === "dashboard" && accessToken && (
           <Dashboard accessToken={accessToken} />
-        )}
-        {activeTab === "search" && accessToken && (
-          <KnowledgeSearch accessToken={accessToken} />
         )}
         {activeTab === "knowledge" && accessToken && userAccount && (
           <QASystem 
