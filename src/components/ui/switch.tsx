@@ -7,12 +7,15 @@ interface SwitchProps {
   className?: string;
 }
 
-function Switch({ checked = false, onCheckedChange, disabled = false, className = "" }: SwitchProps) {
+function Switch({ checked = false, onCheckedChange, disabled = false }: SwitchProps) {
   const handleClick = () => {
     if (!disabled && onCheckedChange) {
+      console.log('Switch clicked, current state:', checked, 'new state:', !checked);
       onCheckedChange(!checked);
     }
   };
+
+  console.log('Switch rendering with checked:', checked);
 
   return (
     <button
@@ -21,23 +24,32 @@ function Switch({ checked = false, onCheckedChange, disabled = false, className 
       aria-checked={checked}
       disabled={disabled}
       onClick={handleClick}
-      className={`
-        inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
-        disabled:cursor-not-allowed disabled:opacity-50
-        ${checked 
-          ? 'bg-blue-600 border-blue-700' 
-          : 'bg-slate-800 border-slate-900 dark:bg-slate-300 dark:border-slate-400'
-        }
-        ${className}
-      `}
+      style={{
+        display: 'inline-flex',
+        height: '28px',
+        width: '48px',
+        alignItems: 'center',
+        borderRadius: '9999px',
+        border: '2px solid',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        backgroundColor: checked ? '#2563eb' : '#1e293b',
+        borderColor: checked ? '#1d4ed8' : '#0f172a',
+        transition: 'all 0.2s',
+        opacity: disabled ? 0.5 : 1,
+        padding: '0',
+      }}
     >
       <span
-        className={`
-          pointer-events-none block h-6 w-6 rounded-full shadow-xl transition-transform border-2
-          bg-white border-white dark:bg-slate-900 dark:border-slate-900
-          ${checked ? 'translate-x-4' : 'translate-x-0'}
-        `}
+        style={{
+          display: 'block',
+          height: '24px',
+          width: '24px',
+          borderRadius: '9999px',
+          backgroundColor: '#ffffff',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+          transform: checked ? 'translateX(16px)' : 'translateX(0px)',
+          transition: 'transform 0.2s',
+        }}
       />
     </button>
   );
