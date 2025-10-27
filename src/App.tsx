@@ -154,11 +154,11 @@ export default function App() {
         <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
-                <Brain className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center">
+                <Brain className="w-7 h-7 text-white" />
               </div>
-              <div className="hidden md:block">
-                <h1 className="text-slate-900 dark:text-slate-100">MRI Synapse</h1>
+              <div>
+                <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">MRI Synapse</h1>
                 <p className="text-slate-500 dark:text-slate-400 text-sm">Cross-Team Intelligence Hub</p>
               </div>
             </div>
