@@ -52,6 +52,8 @@ export function Messages({ currentUserName }: MessagesProps) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showNewMessageDialog, setShowNewMessageDialog] = useState(false);
   const [newRecipientEmail, setNewRecipientEmail] = useState("");
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const initializeUser = async () => {
@@ -219,6 +221,13 @@ export function Messages({ currentUserName }: MessagesProps) {
     setIsSending(true);
     const messageContent = newMessage;
     setNewMessage(""); // Clear input immediately for better UX
+    
+    // Stop typing indicator
+    broadcastTyping(false);
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+      setTypingTimeout(null);
+    }
 
     try {
       const supabase = createClient();
@@ -289,6 +298,67 @@ export function Messages({ currentUserName }: MessagesProps) {
     startTeamsChat([recipient], `Hi ${selectedConversation.participantName}!`);
     toast.success(`Opening Teams chat with ${selectedConversation.participantName}...`);
   };
+
+  // Broadcast typing status
+  const broadcastTyping = async (isTyping: boolean) => {
+    if (!selectedConversation || !currentUserId) return;
+    
+    const supabase = createClient();
+    const channel = supabase.channel(`conversation:${selectedConversation.id}`);
+    
+    channel.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { userId: currentUserId, isTyping }
+    });
+  };
+
+  // Handle user typing
+  const handleTyping = (value: string) => {
+    setNewMessage(value);
+    
+    // Clear existing timeout
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+    }
+    
+    // Broadcast that user is typing
+    if (value.length > 0) {
+      broadcastTyping(true);
+      
+      // Set timeout to stop typing indicator after 3 seconds of inactivity
+      const timeout = setTimeout(() => {
+        broadcastTyping(false);
+      }, 3000);
+      
+      setTypingTimeout(timeout);
+    } else {
+      broadcastTyping(false);
+    }
+  };
+
+  // Subscribe to typing events
+  useEffect(() => {
+    if (!selectedConversation || !currentUserId) return;
+    
+    const supabase = createClient();
+    const channel = supabase.channel(`conversation:${selectedConversation.id}`);
+    
+    channel
+      .on('broadcast', { event: 'typing' }, (payload: any) => {
+        // Only show typing indicator if it's not from current user
+        if (payload.payload.userId !== currentUserId) {
+          setOtherUserTyping(payload.payload.isTyping);
+        }
+      })
+      .subscribe();
+    
+    // Cleanup on unmount or conversation change
+    return () => {
+      channel.unsubscribe();
+      setOtherUserTyping(false);
+    };
+  }, [selectedConversation, currentUserId]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -504,6 +574,24 @@ export function Messages({ currentUserName }: MessagesProps) {
                         </div>
                       </div>
                     ))}
+                    
+                    {/* Typing Indicator */}
+                    {otherUserTyping && (
+                      <div className="flex justify-start">
+                        <div className="bg-slate-100 dark:bg-slate-800 rounded-lg px-4 py-3 max-w-[75%]">
+                          <div className="flex items-center gap-1">
+                            <div className="flex gap-1">
+                              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                            </div>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+                              {selectedConversation?.participantName} is typing...
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </ScrollArea>
@@ -513,7 +601,7 @@ export function Messages({ currentUserName }: MessagesProps) {
                   <Textarea
                     placeholder="Type your message..."
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={(e) => handleTyping(e.target.value)}
                     onKeyPress={handleKeyPress}
                     className="min-h-[60px] max-h-[120px] resize-none"
                   />
