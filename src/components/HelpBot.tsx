@@ -5,6 +5,7 @@ import { Card } from './ui/card'
 import { Input } from './ui/input'
 import { ScrollArea } from './ui/scroll-area'
 import { Badge } from './ui/badge'
+import { supabase } from '../lib/supabase'
 
 interface Message {
   id: string
@@ -14,30 +15,184 @@ interface Message {
   suggestions?: string[]
 }
 
+interface Expert {
+  id: string;
+  name: string;
+  expertise: string[];
+  relevance: number;
+}
+
+interface Connection {
+  id: string;
+  person1: string;
+  person2: string;
+  sharedProjects: string[];
+  score: number;
+}
+
 export function HelpBot() {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Hello! I\'m your MRI Synapse assistant. I can help you with:\n\n• Finding experts and team members\n• Navigating features and tools\n• Understanding analytics\n• Q&A system guidance\n• Troubleshooting issues\n• Best practices\n\nWhat would you like to know?',
+      content: 'Hello! I\'m your AI assistant. I can help you with:\n\n• Finding experts ("Who knows about React?")\n• Platform features and navigation\n• Analytics and insights\n• Q&A system guidance\n• Trending topics\n• Suggesting connections\n• Troubleshooting issues\n\nWhat would you like to know?',
       isUser: false,
       timestamp: new Date(),
       suggestions: [
+        'Who knows about TypeScript?',
+        'What\'s trending?',
         'How do I find an expert?',
-        'How does the Q&A system work?',
-        'Show me analytics features',
-        'How to send messages?'
+        'Show me analytics features'
       ]
     },
   ])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [trendingTopics, setTrendingTopics] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
+
+  // Load trending topics on mount
+  useEffect(() => {
+    loadTrendingTopics()
+  }, [])
+
+  const loadTrendingTopics = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('knowledge_items')
+        .select('tags')
+        .not('tags', 'is', null);
+
+      if (error) throw error;
+
+      const allTags: string[] = [];
+      data?.forEach(item => {
+        if (item.tags && Array.isArray(item.tags)) {
+          allTags.push(...item.tags);
+        }
+      });
+
+      const tagCounts: { [key: string]: number } = {};
+      allTags.forEach(tag => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+
+      const trending = Object.entries(tagCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([tag]) => tag);
+
+      setTrendingTopics(trending);
+    } catch (error) {
+      console.error('Error loading trending topics:', error);
+    }
+  };
+
+  const findExperts = async (searchTerm: string): Promise<Expert[]> => {
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, skills, bio')
+        .not('skills', 'is', null);
+
+      if (error) throw error;
+
+      const experts: Expert[] = [];
+      const searchLower = searchTerm.toLowerCase();
+
+      profiles?.forEach(profile => {
+        let relevance = 0;
+        const expertise: string[] = [];
+
+        if (profile.skills && Array.isArray(profile.skills)) {
+          profile.skills.forEach((skill: string) => {
+            if (skill.toLowerCase().includes(searchLower) || searchLower.includes(skill.toLowerCase())) {
+              relevance += 0.5;
+              expertise.push(skill);
+            }
+          });
+        }
+
+        if (profile.bio && profile.bio.toLowerCase().includes(searchLower)) {
+          relevance += 0.3;
+        }
+
+        if (relevance > 0) {
+          experts.push({
+            id: profile.id,
+            name: profile.full_name || 'Unknown',
+            expertise: expertise.length > 0 ? expertise : profile.skills || [],
+            relevance: Math.min(relevance, 1)
+          });
+        }
+      });
+
+      return experts.sort((a, b) => b.relevance - a.relevance).slice(0, 5);
+    } catch (error) {
+      console.error('Error finding experts:', error);
+      return [];
+    }
+  };
+
+  const suggestConnections = async (): Promise<Connection[]> => {
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, skills, department');
+
+      if (error) throw error;
+
+      const connections: Connection[] = [];
+
+      for (let i = 0; i < (profiles?.length || 0); i++) {
+        for (let j = i + 1; j < (profiles?.length || 0); j++) {
+          const person1 = profiles![i];
+          const person2 = profiles![j];
+
+          const skills1 = person1.skills || [];
+          const skills2 = person2.skills || [];
+          const sharedSkills = skills1.filter((s: string) => skills2.includes(s));
+
+          if (sharedSkills.length > 0) {
+            connections.push({
+              id: `${person1.id}-${person2.id}`,
+              person1: person1.full_name || 'Unknown',
+              person2: person2.full_name || 'Unknown',
+              sharedProjects: sharedSkills,
+              score: sharedSkills.length / Math.max(skills1.length, skills2.length)
+            });
+          }
+        }
+      }
+
+      return connections.sort((a, b) => b.score - a.score).slice(0, 5);
+    } catch (error) {
+      console.error('Error suggesting connections:', error);
+      return [];
+    }
+  };
+
+  const extractSearchTerm = (query: string): string => {
+    const patterns = [
+      /who knows (?:about |in )?(.+?)(?:\?|$)/i,
+      /find (?:experts? |people )?(?:in |with |about )?(.+?)(?:\?|$)/i,
+      /expert(?:s)? (?:in |about |with )?(.+?)(?:\?|$)/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = query.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+
+    return query.replace(/who knows|find|expert|about|in/gi, '').trim();
+  };
 
   const handleSend = async (messageText?: string) => {
     const textToSend = messageText || input
@@ -56,14 +211,17 @@ export function HelpBot() {
     // Show typing indicator
     setIsTyping(true)
 
-    // Simulate brief thinking time for better UX
-    setTimeout(() => {
+    // Process the query
+    setTimeout(async () => {
+      const response = await getHelpfulResponse(textToSend);
+      const suggestions = getSuggestions(textToSend);
+      
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: getHelpfulResponse(textToSend),
+        content: response,
         isUser: false,
         timestamp: new Date(),
-        suggestions: getSuggestions(textToSend)
+        suggestions
       }
       setMessages((prev) => [...prev, botMessage])
       setIsTyping(false)
@@ -73,8 +231,14 @@ export function HelpBot() {
   const getSuggestions = (query: string): string[] | undefined => {
     const lowerQuery = query.toLowerCase()
     
-    if (lowerQuery.includes('expert') || lowerQuery.includes('find')) {
-      return ['How to filter experts?', 'What skills can I search for?', 'How to connect with experts?']
+    if (lowerQuery.includes('who knows') || lowerQuery.includes('expert') || lowerQuery.includes('find')) {
+      return ['Find experts in AI', 'Who knows about databases?', 'Find cloud architects']
+    }
+    if (lowerQuery.includes('trending') || lowerQuery.includes('popular') || lowerQuery.includes('topic')) {
+      return ['Who knows about the top trending topic?', 'Show me projects', 'What\'s new?']
+    }
+    if (lowerQuery.includes('connection') || lowerQuery.includes('suggest') || lowerQuery.includes('recommend')) {
+      return ['Who should work with our AI team?', 'Find collaboration opportunities', 'Suggest connections']
     }
     if (lowerQuery.includes('q&a') || lowerQuery.includes('question')) {
       return ['How to ask a question?', 'How does voting work?', 'How to accept an answer?']
@@ -88,12 +252,61 @@ export function HelpBot() {
     return undefined
   }
 
-  const getHelpfulResponse = (query: string): string => {
+  const getHelpfulResponse = async (query: string): Promise<string> => {
     const lowerQuery = query.toLowerCase()
 
-    // Expert Finder help
-    if (lowerQuery.includes('expert') || lowerQuery.includes('find expert')) {
-      return 'Finding Experts:\n\n1. Go to the Experts tab\n2. Use the search bar to search by name, role, department, or skills\n3. Press Enter to see results\n4. Click on profiles to view details\n5. Use Connect button to send connection requests\n\nPro tip: Search by specific skills like "React" or "SQL" to find the right experts!'
+    // AI-powered Expert Finding
+    if (lowerQuery.includes('who knows') || lowerQuery.includes('expert') || lowerQuery.includes('find')) {
+      const searchTerm = extractSearchTerm(query);
+      const foundExperts = await findExperts(searchTerm);
+
+      if (foundExperts.length > 0) {
+        let response = `I found ${foundExperts.length} expert(s) with knowledge in "${searchTerm}":\n\n`;
+        foundExperts.forEach((expert, idx) => {
+          response += `${idx + 1}. **${expert.name}**\n   Skills: ${expert.expertise.join(', ')}\n   Relevance: ${(expert.relevance * 100).toFixed(0)}%\n\n`;
+        });
+        return response;
+      } else {
+        return `I couldn't find any experts specifically for "${searchTerm}". Try:\n• Broadening your search terms\n• Checking spelling\n• Asking about related topics\n\nOr go to the Experts tab to search manually.`;
+      }
+    }
+
+    // Connection Suggestions
+    if (lowerQuery.includes('connection') || lowerQuery.includes('suggest') || lowerQuery.includes('recommend')) {
+      const suggestedConnections = await suggestConnections();
+
+      if (suggestedConnections.length > 0) {
+        let response = `Based on project history and expertise, here are suggested connections:\n\n`;
+        suggestedConnections.forEach((conn, idx) => {
+          response += `${idx + 1}. Connect **${conn.person1}** with **${conn.person2}**\n   Shared interests: ${conn.sharedProjects.join(', ')}\n   Match score: ${(conn.score * 100).toFixed(0)}%\n\n`;
+        });
+        return response;
+      } else {
+        return `I couldn't find connection suggestions. This might be because:\n• Limited project history\n• Not enough shared expertise areas\n• Need more user data`;
+      }
+    }
+
+    // Trending Topics
+    if (lowerQuery.includes('trending') || lowerQuery.includes('popular') || lowerQuery.includes('topic')) {
+      let response = `Here are the trending topics based on recent activity:\n\n`;
+      if (trendingTopics.length > 0) {
+        trendingTopics.forEach((topic, idx) => {
+          response += `${idx + 1}. **${topic}**\n`;
+        });
+      } else {
+        response += 'No trending topics found yet. Topics will appear as users create and tag more content.';
+      }
+      return response;
+    }
+
+    // Auto-Tagging Info
+    if (lowerQuery.includes('tag') || lowerQuery.includes('categorize')) {
+      return `🏷️ **Auto-Tagging with NLP**\n\nI can automatically tag content by:\n• Analyzing technical terms and frameworks\n• Identifying programming languages\n• Detecting project types and domains\n• Recognizing common patterns\n\nExample tags I might suggest:\n• React, TypeScript, Frontend\n• Machine Learning, Python, AI\n• DevOps, Docker, Kubernetes\n• Database, PostgreSQL, Backend`;
+    }
+
+    // Summarization Info
+    if (lowerQuery.includes('summarize') || lowerQuery.includes('summary')) {
+      return `📄 **Document Summary Generation**\n\nTo summarize a document, I would:\n1. Extract key points and main ideas\n2. Identify important technical concepts\n3. Highlight action items and conclusions\n4. Suggest related resources\n\nThis feature uses NLP to analyze long-form content and create concise summaries. Select a specific document to get started!`;
     }
 
     // Q&A System help
