@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Brain, Search, Users, Network, MessageSquare, Lightbulb, Moon, LogOut, HelpCircle } from "lucide-react";
+import { Brain, Search, Users, Network, MessageSquare, Lightbulb, Moon, LogOut, HelpCircle, Settings as SettingsIcon } from "lucide-react";
 import { Auth } from "./components/Auth";
 import { Dashboard } from "./components/Dashboard";
 import { KnowledgeSearch } from "./components/KnowledgeSearch";
@@ -7,6 +7,7 @@ import { ExpertFinder } from "./components/ExpertFinder";
 import { ProjectConnections } from "./components/ProjectConnections";
 import { InsightsHub } from "./components/InsightsHub";
 import { Messages } from "./components/Messages";
+import { Settings } from "./components/Settings";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
 import { createClient } from "./utils/supabase/client";
@@ -277,6 +278,16 @@ export default function App() {
               <Lightbulb className="w-4 h-4" />
               <span className="hidden sm:inline">Insights</span>
             </Button>
+            <Button
+              type="button"
+              role="tab"
+              variant={activeTab === "settings" ? "default" : "ghost"}
+              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
+              onClick={() => setActiveTab("settings")}
+            >
+              <SettingsIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </Button>
           </div>
         </div>
 
@@ -309,6 +320,12 @@ export default function App() {
         )}
         {activeTab === "insights" && accessToken && (
           <InsightsHub accessToken={accessToken} />
+        )}
+        {activeTab === "settings" && userProfile && (
+          <Settings 
+            user={userProfile}
+            onProfileUpdate={(updatedProfile) => setUserProfile(updatedProfile)}
+          />
         )}
         </div>
       </main>
