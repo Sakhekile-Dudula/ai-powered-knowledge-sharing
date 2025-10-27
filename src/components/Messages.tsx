@@ -578,16 +578,11 @@ export function Messages({ currentUserName }: MessagesProps) {
                     {/* Typing Indicator */}
                     {otherUserTyping && (
                       <div className="flex justify-start">
-                        <div className="bg-slate-100 dark:bg-slate-800 rounded-lg px-4 py-3 max-w-[75%]">
-                          <div className="flex items-center gap-1">
-                            <div className="flex gap-1">
-                              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                            </div>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-                              {selectedConversation?.participantName} is typing...
-                            </span>
+                        <div className="bg-slate-100 dark:bg-slate-800 rounded-lg px-4 py-3">
+                          <div className="flex gap-1">
+                            <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                            <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                            <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                           </div>
                         </div>
                       </div>
