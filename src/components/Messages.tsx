@@ -578,8 +578,8 @@ export function Messages({ currentUserName }: MessagesProps) {
                     
                     {/* Typing Indicator */}
                     {otherUserTyping && (
-                      <div className="flex justify-start mb-4">
-                        <div className="flex items-center gap-1.5 px-2 py-2">
+                      <div className="flex justify-start mb-4 ml-2">
+                        <div className="flex items-center gap-1.5">
                           <span className="typing-dot w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full"></span>
                           <span className="typing-dot w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full"></span>
                           <span className="typing-dot w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full"></span>
