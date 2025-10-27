@@ -36,7 +36,7 @@ function Switch({ checked = false, onCheckedChange, disabled = false, className 
         className={`
           pointer-events-none block h-6 w-6 rounded-full shadow-xl transition-transform border-2
           bg-white border-white dark:bg-slate-900 dark:border-slate-900
-          ${checked ? 'translate-x-5' : 'translate-x-0'}
+          ${checked ? 'translate-x-4' : 'translate-x-0'}
         `}
       />
     </button>
