@@ -348,6 +348,7 @@ export function Messages({ currentUserName }: MessagesProps) {
       .on('broadcast', { event: 'typing' }, (payload: any) => {
         // Only show typing indicator if it's not from current user
         if (payload.payload.userId !== currentUserId) {
+          console.log('Typing indicator:', payload.payload.isTyping);
           setOtherUserTyping(payload.payload.isTyping);
         }
       })
@@ -577,12 +578,12 @@ export function Messages({ currentUserName }: MessagesProps) {
                     
                     {/* Typing Indicator */}
                     {otherUserTyping && (
-                      <div className="flex justify-start">
-                        <div className="bg-slate-100 dark:bg-slate-800 rounded-lg px-4 py-3">
-                          <div className="flex gap-1">
-                            <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                            <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                            <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                      <div className="flex justify-start mb-4">
+                        <div className="bg-slate-200 dark:bg-slate-700 rounded-2xl px-5 py-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }}></span>
+                            <span className="w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '1s' }}></span>
+                            <span className="w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1s' }}></span>
                           </div>
                         </div>
                       </div>
