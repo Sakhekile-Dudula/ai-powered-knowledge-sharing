@@ -4,7 +4,6 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from 'sonner';
 import { startTeamsCall, startTeamsChat, openTeams } from '../utils/teamsIntegration';
 
@@ -40,6 +39,7 @@ interface CollabRequest {
 export function CollaborationTools({ user }: CollaborationToolsProps) {
   const [officeHours, setOfficeHours] = useState<OfficeHour[]>([]);
   const [collabRequests, setCollabRequests] = useState<CollabRequest[]>([]);
+  const [activeTab, setActiveTab] = useState('office-hours');
 
   console.log('User:', user); // Using user to avoid TS error
 
@@ -131,16 +131,50 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
         <p className="text-muted-foreground mt-2">Connect, collaborate, and learn together</p>
       </div>
 
-      <Tabs defaultValue="office-hours" className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full max-w-4xl bg-muted p-1 rounded-lg">
-          <TabsTrigger value="office-hours" className="rounded-md">Office Hours</TabsTrigger>
-          <TabsTrigger value="video-chat" className="rounded-md">Video Chat</TabsTrigger>
-          <TabsTrigger value="documents" className="rounded-md">Documents</TabsTrigger>
-          <TabsTrigger value="requests" className="rounded-md">Requests</TabsTrigger>
-        </TabsList>
+      {/* Tab Navigation */}
+      <div className="bg-muted text-muted-foreground h-auto items-center justify-center rounded-xl p-1 flex flex-wrap gap-1 w-full max-w-4xl mb-6">
+        <Button
+          type="button"
+          variant={activeTab === "office-hours" ? "default" : "ghost"}
+          className="flex-1 min-w-[120px]"
+          onClick={() => setActiveTab("office-hours")}
+        >
+          <Calendar className="w-4 h-4 mr-2" />
+          Office Hours
+        </Button>
+        <Button
+          type="button"
+          variant={activeTab === "video-chat" ? "default" : "ghost"}
+          className="flex-1 min-w-[120px]"
+          onClick={() => setActiveTab("video-chat")}
+        >
+          <Video className="w-4 h-4 mr-2" />
+          Video Chat
+        </Button>
+        <Button
+          type="button"
+          variant={activeTab === "documents" ? "default" : "ghost"}
+          className="flex-1 min-w-[120px]"
+          onClick={() => setActiveTab("documents")}
+        >
+          <FileEdit className="w-4 h-4 mr-2" />
+          Documents
+        </Button>
+        <Button
+          type="button"
+          variant={activeTab === "requests" ? "default" : "ghost"}
+          className="flex-1 min-w-[120px]"
+          onClick={() => setActiveTab("requests")}
+        >
+          <Users className="w-4 h-4 mr-2" />
+          Requests
+        </Button>
+      </div>
 
+      {/* Tab Content */}
+      <div className="space-y-6">
         {/* Office Hours Tab */}
-        <TabsContent value="office-hours" className="space-y-4">
+        {activeTab === "office-hours" && (
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Calendar className="w-5 h-5" />
@@ -222,10 +256,10 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
               </Button>
             </div>
           </Card>
-        </TabsContent>
+        )}
 
         {/* Video Chat Tab */}
-        <TabsContent value="video-chat" className="space-y-4">
+        {activeTab === "video-chat" && (
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Video className="w-5 h-5" />
@@ -296,10 +330,10 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
               </p>
             </div>
           </Card>
-        </TabsContent>
+        )}
 
         {/* Collaborative Documents Tab */}
-        <TabsContent value="documents" className="space-y-4">
+        {activeTab === "documents" && (
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <FileEdit className="w-5 h-5" />
@@ -339,10 +373,10 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
               ))}
             </div>
           </Card>
-        </TabsContent>
+        )}
 
         {/* Collaboration Requests Tab */}
-        <TabsContent value="requests" className="space-y-4">
+        {activeTab === "requests" && (
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Users className="w-5 h-5" />
@@ -413,8 +447,8 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
               )}
             </div>
           </Card>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   );
 }
