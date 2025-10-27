@@ -11,9 +11,12 @@ import {
   Send,
   Loader2,
   Clock,
+  Video,
+  Phone,
 } from "lucide-react";
 import { createClient } from "../utils/supabase/client";
 import { toast } from "sonner";
+import { startTeamsCall, startTeamsChat } from "../utils/teamsIntegration";
 
 interface MessagesProps {
   currentUserName: string;
@@ -22,6 +25,7 @@ interface MessagesProps {
 interface Conversation {
   id: string;
   participantName: string;
+  participantEmail?: string;
   lastMessage: string;
   timestamp: string;
   unreadCount: number;
@@ -247,26 +251,43 @@ export function Messages({ currentUserName }: MessagesProps) {
         return;
       }
 
-      // Add the new message to the list optimistically
-      const optimisticMessage: Message = {
-        id: data.id,
+      // Add message to local state immediately
+      const newMsg: Message = {
+        id: data || Date.now().toString(),
         sender: currentUserName,
         content: messageContent,
         timestamp: new Date().toISOString(),
         isCurrentUser: true,
       };
+      setMessages((prev) => [...prev, newMsg]);
 
-      setMessages([...messages, optimisticMessage]);
-      toast.success("Message sent!");
-      
-      // Update conversation list
-      fetchConversations();
+      // Refresh messages to ensure sync
+      await fetchMessages(selectedConversation.id);
+
+      toast.success('Message sent!');
     } catch (error) {
-      console.error("Failed to send message:", error);
-      toast.error(`Failed to send message: ${error instanceof Error ? error.message : "Network error"}`);
+      console.error('Failed to send message:', error);
+      toast.error('Failed to send message');
+      setNewMessage(messageContent);
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleTeamsCall = () => {
+    if (!selectedConversation) return;
+    
+    const recipient = selectedConversation.participantEmail || selectedConversation.participantName;
+    startTeamsCall([recipient]);
+    toast.success(`Starting Teams call with ${selectedConversation.participantName}...`);
+  };
+
+  const handleTeamsChat = () => {
+    if (!selectedConversation) return;
+    
+    const recipient = selectedConversation.participantEmail || selectedConversation.participantName;
+    startTeamsChat([recipient], `Hi ${selectedConversation.participantName}!`);
+    toast.success(`Opening Teams chat with ${selectedConversation.participantName}...`);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -405,19 +426,43 @@ export function Messages({ currentUserName }: MessagesProps) {
           {selectedConversation ? (
             <>
               <CardHeader className="border-b dark:border-slate-700">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                    <span className="text-white">
-                      {getInitials(selectedConversation.participantName)}
-                    </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                      <span className="text-white">
+                        {getInitials(selectedConversation.participantName)}
+                      </span>
+                    </div>
+                    <div>
+                      <CardTitle>{selectedConversation.participantName}</CardTitle>
+                      {selectedConversation.participantRole && (
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">
+                          {selectedConversation.participantRole}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle>{selectedConversation.participantName}</CardTitle>
-                    {selectedConversation.participantRole && (
-                      <p className="text-slate-500 dark:text-slate-400 text-sm">
-                        {selectedConversation.participantRole}
-                      </p>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleTeamsCall}
+                      className="flex items-center gap-2"
+                      title="Start Teams video call"
+                    >
+                      <Video className="w-4 h-4" />
+                      <span className="hidden sm:inline">Call</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleTeamsChat}
+                      className="flex items-center gap-2"
+                      title="Start Teams chat"
+                    >
+                      <Phone className="w-4 h-4" />
+                      <span className="hidden sm:inline">Chat</span>
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
