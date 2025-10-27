@@ -1,37 +1,45 @@
 "use client";
 
-import * as React from "react";
-import * as SwitchPrimitive from "@radix-ui/react-switch";
+interface SwitchProps {
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  disabled?: boolean;
+  className?: string;
+}
 
-import { cn } from "./utils";
+function Switch({ checked = false, onCheckedChange, disabled = false, className = "" }: SwitchProps) {
+  const handleClick = () => {
+    if (!disabled && onCheckedChange) {
+      onCheckedChange(!checked);
+    }
+  };
 
-function Switch({
-  className,
-  ...props
-}: React.ComponentProps<typeof SwitchPrimitive.Root>) {
   return (
-    <SwitchPrimitive.Root
-      className={cn(
-        "peer inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-700",
-        "data-[state=unchecked]:bg-slate-800 data-[state=unchecked]:border-slate-900",
-        "dark:data-[state=unchecked]:bg-slate-300 dark:data-[state=unchecked]:border-slate-400",
-        className,
-      )}
-      {...props}
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={handleClick}
+      className={`
+        inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+        disabled:cursor-not-allowed disabled:opacity-50
+        ${checked 
+          ? 'bg-blue-600 border-blue-700' 
+          : 'bg-slate-800 border-slate-900 dark:bg-slate-300 dark:border-slate-400'
+        }
+        ${className}
+      `}
     >
-      <SwitchPrimitive.Thumb
-        className={cn(
-          "pointer-events-none block h-6 w-6 rounded-full shadow-xl transition-transform border-2",
-          "bg-white border-white",
-          "dark:bg-slate-900 dark:border-slate-900",
-          "data-[state=checked]:translate-x-5",
-          "data-[state=unchecked]:translate-x-0",
-        )}
+      <span
+        className={`
+          pointer-events-none block h-6 w-6 rounded-full shadow-xl transition-transform border-2
+          bg-white border-white dark:bg-slate-900 dark:border-slate-900
+          ${checked ? 'translate-x-5' : 'translate-x-0'}
+        `}
       />
-    </SwitchPrimitive.Root>
+    </button>
   );
 }
 
