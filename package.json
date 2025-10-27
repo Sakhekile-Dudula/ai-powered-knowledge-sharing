@@ -108,7 +108,7 @@
             "test:e2e:ui": "playwright test --ui",
             "test:all": "npm run test:unit && npm run test:e2e",
             "predeploy": "npm run build",
-            "deploy": "gh-pages -d dist --nojekyll --dotfiles --add",
+            "deploy": "gh-pages -d dist --nojekyll --dotfiles",
             "supabase:start": "npx supabase start",
             "supabase:stop": "npx supabase stop",
             "supabase:functions:serve": "npx supabase functions serve",
