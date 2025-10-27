@@ -343,6 +343,7 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
                   <p className="text-sm text-muted-foreground">Receive email updates</p>
                 </div>
                 <Switch
+                  key={`email-${notifications.email}`}
                   checked={notifications.email}
                   onCheckedChange={() => handleNotificationChange('email')}
                 />
@@ -354,6 +355,7 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
                   <p className="text-sm text-muted-foreground">Browser push notifications</p>
                 </div>
                 <Switch
+                  key={`push-${notifications.push}`}
                   checked={notifications.push}
                   onCheckedChange={() => handleNotificationChange('push')}
                 />
@@ -365,6 +367,7 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
                   <p className="text-sm text-muted-foreground">Notify when you receive messages</p>
                 </div>
                 <Switch
+                  key={`messages-${notifications.messages}`}
                   checked={notifications.messages}
                   onCheckedChange={() => handleNotificationChange('messages')}
                 />
@@ -376,6 +379,7 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
                   <p className="text-sm text-muted-foreground">Notify when someone mentions you</p>
                 </div>
                 <Switch
+                  key={`mentions-${notifications.mentions}`}
                   checked={notifications.mentions}
                   onCheckedChange={() => handleNotificationChange('mentions')}
                 />
@@ -387,6 +391,7 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
                   <p className="text-sm text-muted-foreground">Platform updates and announcements</p>
                 </div>
                 <Switch
+                  key={`updates-${notifications.updates}`}
                   checked={notifications.updates}
                   onCheckedChange={() => handleNotificationChange('updates')}
                 />
