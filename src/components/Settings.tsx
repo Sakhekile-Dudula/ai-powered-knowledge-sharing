@@ -171,10 +171,11 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
   };
 
   const handleNotificationChange = (key: keyof typeof notifications) => {
+    console.log('Toggling notification:', key, 'from', notifications[key], 'to', !notifications[key]);
     const newNotifications = { ...notifications, [key]: !notifications[key] };
     setNotifications(newNotifications);
     localStorage.setItem('notifications', JSON.stringify(newNotifications));
-    toast.success("Notification preferences updated");
+    toast.success(`${key} notifications ${newNotifications[key] ? 'enabled' : 'disabled'}`);
   };
 
   return (
