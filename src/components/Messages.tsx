@@ -581,9 +581,9 @@ export function Messages({ currentUserName }: MessagesProps) {
                       <div className="flex justify-start mb-4">
                         <div className="bg-slate-200 dark:bg-slate-700 rounded-2xl px-5 py-4">
                           <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }}></span>
-                            <span className="w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '1s' }}></span>
-                            <span className="w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1s' }}></span>
+                            <span className="typing-dot w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full"></span>
+                            <span className="typing-dot w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full"></span>
+                            <span className="typing-dot w-3 h-3 bg-slate-500 dark:bg-slate-400 rounded-full"></span>
                           </div>
                         </div>
                       </div>
