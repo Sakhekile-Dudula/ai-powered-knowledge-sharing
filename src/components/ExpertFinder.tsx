@@ -10,7 +10,6 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { MessagingDialog } from "./MessagingDialog";
-import { projectId } from "../utils/supabase/info";
 import { toast } from "sonner";
 
 interface ExpertFinderProps {
@@ -24,6 +23,7 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
   const [isLoading, setIsLoading] = useState(true);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [selectedExpert, setSelectedExpert] = useState<string>("");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   
   // Calendar booking state
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = useState(false);
@@ -35,24 +35,49 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
 
   useEffect(() => {
     fetchExperts();
-  }, []);
+  }, [selectedDepartment]);
 
   const fetchExperts = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/experts`,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
+      const { createClient } = await import("../utils/supabase/client");
+      const supabase = createClient();
+      
+      let query = supabase
+        .from('profiles')
+        .select('*');
+      
+      // Filter by department if not "all"
+      if (selectedDepartment !== 'all') {
+        query = query.eq('department', selectedDepartment);
+      }
+      
+      const { data, error } = await query;
 
-      if (response.ok) {
-        const data = await response.json();
-        setExperts(data.experts);
+      if (error) {
+        console.error("Failed to fetch experts:", error);
+        toast.error("Failed to load experts");
+        return;
+      }
+
+      if (data) {
+        const mappedExperts = data.map((profile: any) => ({
+          id: profile.id,
+          name: profile.full_name,
+          role: profile.role || 'Team Member',
+          team: profile.team || 'General',
+          department: profile.department,
+          expertise: profile.expertise || [],
+          availability: 'Available',
+          rating: 4.8,
+          avatar: profile.avatar_url
+        }));
+        console.log('Loaded experts:', mappedExperts);
+        setExperts(mappedExperts);
       }
     } catch (error) {
       console.error("Failed to fetch experts:", error);
+      toast.error("Failed to load experts");
     } finally {
       setIsLoading(false);
     }
@@ -62,16 +87,26 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
     return name.split(" ").map(n => n[0]).join("").toUpperCase();
   };
 
-  const skills = [
-    { name: "API Design", count: 23 },
-    { name: "Cloud Infrastructure", count: 19 },
-    { name: "React", count: 31 },
-    { name: "System Architecture", count: 15 },
-    { name: "Security", count: 18 },
-    { name: "Performance", count: 22 },
-    { name: "Microservices", count: 17 },
-    { name: "Database Design", count: 14 },
-  ];
+  // Dynamically calculate skills from all experts' expertise
+  const skills = (() => {
+    const skillMap: { [key: string]: number } = {};
+    
+    experts.forEach(expert => {
+      if (Array.isArray(expert.expertise)) {
+        expert.expertise.forEach((skill: string) => {
+          skillMap[skill] = (skillMap[skill] || 0) + 1;
+        });
+      } else if (typeof expert.expertise === 'string' && expert.expertise) {
+        skillMap[expert.expertise] = (skillMap[expert.expertise] || 0) + 1;
+      }
+    });
+
+    // Convert to array and sort by count (descending)
+    return Object.entries(skillMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10); // Show top 10 skills
+  })();
 
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
@@ -138,12 +173,37 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
 
   const filteredExperts = searchQuery
     ? experts.filter(
-        (expert) =>
-          expert.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          expert.team?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          expert.expertise?.some((skill: string) =>
-            skill.toLowerCase().includes(searchQuery.toLowerCase())
-          )
+        (expert) => {
+          const query = searchQuery.toLowerCase();
+          const name = expert.name?.toLowerCase() || '';
+          const team = expert.team?.toLowerCase() || '';
+          const department = expert.department?.toLowerCase() || '';
+          const role = expert.role?.toLowerCase() || '';
+          
+          console.log('Searching:', { query, name, team, department, role, expertise: expert.expertise });
+          
+          // Handle expertise - can be array or string
+          let expertiseMatch = false;
+          if (Array.isArray(expert.expertise)) {
+            expertiseMatch = expert.expertise.some((skill: string) =>
+              skill.toLowerCase().includes(query)
+            );
+          } else if (typeof expert.expertise === 'string') {
+            expertiseMatch = expert.expertise.toLowerCase().includes(query);
+          }
+          
+          const matches = (
+            name.includes(query) ||
+            team.includes(query) ||
+            department.includes(query) ||
+            role.includes(query) ||
+            expertiseMatch
+          );
+          
+          console.log('Match result:', matches);
+          
+          return matches;
+        }
       )
     : experts;
 
@@ -234,7 +294,7 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
       <div className="space-y-6">
       {/* Search Header */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <Input
@@ -242,7 +302,54 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
               className="pl-10 h-12"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  // Scroll to results
+                  const resultsSection = document.querySelector('[data-results-section]');
+                  if (resultsSection) {
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }
+              }}
             />
+          </div>
+          
+          {/* Department Filter */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Filter by Department</Label>
+            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                <SelectItem value="Application Administration">Application Administration</SelectItem>
+                <SelectItem value="Business Operations">Business Operations</SelectItem>
+                <SelectItem value="Client Experience">Client Experience</SelectItem>
+                <SelectItem value="Client Support">Client Support</SelectItem>
+                <SelectItem value="Diversity, Equity, & Inclusion">Diversity, Equity, & Inclusion</SelectItem>
+                <SelectItem value="Education Services">Education Services</SelectItem>
+                <SelectItem value="Finance">Finance</SelectItem>
+                <SelectItem value="GRC Team">GRC Team</SelectItem>
+                <SelectItem value="IT">IT</SelectItem>
+                <SelectItem value="InfoSec">InfoSec</SelectItem>
+                <SelectItem value="Revenue Applications">Revenue Applications</SelectItem>
+                <SelectItem value="Legal">Legal</SelectItem>
+                <SelectItem value="MACS-Everyone">MACS-Everyone</SelectItem>
+                <SelectItem value="Managed Services">Managed Services</SelectItem>
+                <SelectItem value="Marketing">Marketing</SelectItem>
+                <SelectItem value="Partner Connect">Partner Connect</SelectItem>
+                <SelectItem value="Product Development">Product Development</SelectItem>
+                <SelectItem value="Professional Services">Professional Services</SelectItem>
+                <SelectItem value="Sales">Sales</SelectItem>
+                <SelectItem value="Sales Enablement">Sales Enablement</SelectItem>
+                <SelectItem value="Sales Engineering">Sales Engineering</SelectItem>
+                <SelectItem value="Solution Practice - NA">Solution Practice - NA</SelectItem>
+                <SelectItem value="Talent Management">Talent Management</SelectItem>
+                <SelectItem value="Workplace Experience">Workplace Experience</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -272,7 +379,7 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
         </Card>
 
         {/* Experts Grid */}
-        <div className="lg:col-span-3 space-y-4">
+        <div className="lg:col-span-3 space-y-4" data-results-section>
           <div className="flex items-center justify-between">
             <p className="text-slate-700 dark:text-slate-300">
               <span className="text-slate-900 dark:text-slate-100">{filteredExperts.length}</span> experts found
@@ -303,9 +410,16 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
                     <div className="flex-1 min-w-0">
                       <h3 className="text-slate-900 dark:text-slate-100 mb-1">{expert.name}</h3>
                       <p className="text-slate-600 dark:text-slate-400 text-sm mb-1">{expert.role}</p>
-                      <Badge variant="outline" className="text-xs">
-                        {expert.team}
-                      </Badge>
+                      <div className="flex gap-2">
+                        {expert.department && (
+                          <Badge variant="default" className="text-xs bg-blue-600">
+                            {expert.department}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs">
+                          {expert.team}
+                        </Badge>
+                      </div>
                     </div>
                     <Badge className={getAvailabilityColor(expert.availability)}>
                       {expert.availability}

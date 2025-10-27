@@ -12,15 +12,10 @@ import {
   Loader2,
   Clock,
 } from "lucide-react";
-import { projectId } from "../utils/supabase/info";
+import { createClient } from "../utils/supabase/client";
 import { toast } from "sonner";
-import { mockApi } from "../utils/mockApi";
-
-// Toggle between mock API and real Supabase
-const USE_MOCK_API = true; // Set to false when Supabase function is deployed
 
 interface MessagesProps {
-  accessToken: string | null;
   currentUserName: string;
 }
 
@@ -41,7 +36,7 @@ interface Message {
   isCurrentUser: boolean;
 }
 
-export function Messages({ accessToken, currentUserName }: MessagesProps) {
+export function Messages({ currentUserName }: MessagesProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
@@ -50,162 +45,222 @@ export function Messages({ accessToken, currentUserName }: MessagesProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showNewMessageDialog, setShowNewMessageDialog] = useState(false);
+  const [newRecipientEmail, setNewRecipientEmail] = useState("");
 
   useEffect(() => {
-    if (USE_MOCK_API) {
-      mockApi.initializeSampleMessages(currentUserName);
-    }
+    const initializeUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    initializeUser();
     fetchConversations();
   }, []);
 
   useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.participantName);
+    if (selectedConversation && currentUserId) {
+      fetchMessages(selectedConversation.id);
     }
-  }, [selectedConversation]);
+  }, [selectedConversation, currentUserId]);
 
   const fetchConversations = async () => {
     setIsLoading(true);
     try {
-      if (USE_MOCK_API) {
-        const data = await mockApi.getConversations(currentUserName);
-        setConversations(data.conversations || []);
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error('Please log in to view messages');
+        return;
+      }
+
+      const { data, error } = await supabase.rpc('get_user_conversations', {
+        p_user_id: user.id
+      });
+
+      if (error) {
+        console.error('Error fetching conversations:', error);
+        toast.error('Failed to load conversations');
+        return;
+      }
+
+      if (data && Array.isArray(data)) {
+        setConversations(data);
         
         // Auto-select first conversation if exists
-        if (data.conversations && data.conversations.length > 0 && !selectedConversation) {
-          setSelectedConversation(data.conversations[0]);
-        }
-      } else {
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/conversations`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          setConversations(data.conversations || []);
-          
-          // Auto-select first conversation if exists
-          if (data.conversations && data.conversations.length > 0 && !selectedConversation) {
-            setSelectedConversation(data.conversations[0]);
-          }
+        if (data.length > 0 && !selectedConversation) {
+          setSelectedConversation(data[0]);
         }
       }
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
+      toast.error('Failed to load conversations');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchMessages = async (participantName: string) => {
+  const fetchMessages = async (conversationId: string) => {
     try {
-      if (USE_MOCK_API) {
-        const data = await mockApi.getMessages(currentUserName, participantName);
-        setMessages(data.messages || []);
-      } else {
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/messages?recipient=${encodeURIComponent(
-            participantName
-          )}`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
 
-        if (response.ok) {
-          const data = await response.json();
-          setMessages(data.messages || []);
-        }
+      const { data, error } = await supabase.rpc('get_conversation_messages', {
+        p_conversation_id: conversationId,
+        p_user_id: user.id
+      });
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+        return;
+      }
+
+      if (data && Array.isArray(data)) {
+        setMessages(data);
       }
     } catch (error) {
       console.error("Failed to fetch messages:", error);
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return;
+  const startNewConversation = async () => {
+    if (!newRecipientEmail.trim() || !currentUserId) {
+      toast.error('Please enter a recipient email');
+      return;
+    }
 
     setIsSending(true);
     try {
-      if (USE_MOCK_API) {
-        const data = await mockApi.sendMessage(
-          "mock-user-id",
-          currentUserName,
-          selectedConversation.participantName,
-          newMessage
-        );
-        
-        // Add the new message to the list
-        const optimisticMessage: Message = {
-          id: data.messageId,
-          sender: currentUserName,
-          content: newMessage,
-          timestamp: new Date().toISOString(),
-          isCurrentUser: true,
-        };
-
-        setMessages([...messages, optimisticMessage]);
-        setNewMessage("");
-        toast.success("Message sent!");
-        
-        // Update conversation list
-        fetchConversations();
-      } else {
-        console.log("Sending message to:", selectedConversation.participantName, "Content:", newMessage);
-        
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/messages`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              recipient: selectedConversation.participantName,
-              content: newMessage,
-            }),
-          }
-        );
-
-        console.log("Response status:", response.status);
-        console.log("Full URL:", `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/messages`);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Message sent successfully:", data);
-
-          // Add the new message to the list
-          const optimisticMessage: Message = {
-            id: data.messageId || Date.now().toString(),
-            sender: currentUserName,
-            content: newMessage,
-            timestamp: new Date().toISOString(),
-            isCurrentUser: true,
-          };
-
-          setMessages([...messages, optimisticMessage]);
-          setNewMessage("");
-          toast.success("Message sent!");
-          
-          // Update conversation list
-          fetchConversations();
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error("Failed to send message:", response.status, errorData);
-          
-          if (response.status === 404) {
-            console.error("404 Error - Supabase function 'make-server-d5b5d02c' may not be deployed.");
-            console.error("Please ensure the Edge Function is deployed to Supabase.");
-            toast.error("Messaging service not available. Function may not be deployed.");
-          } else {
-            toast.error(`Failed to send message: ${errorData.error || `Error ${response.status}`}`);
-          }
-        }
+      const supabase = createClient();
+      
+      // Find recipient by email
+      const { data: recipient } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('email', newRecipientEmail.trim())
+        .single();
+      
+      if (!recipient) {
+        toast.error('User not found');
+        setIsSending(false);
+        return;
       }
+
+      if (recipient.id === currentUserId) {
+        toast.error("You can't message yourself");
+        setIsSending(false);
+        return;
+      }
+
+      // Check if conversation already exists
+      const existingConv = conversations.find(c => 
+        c.participantName === recipient.full_name
+      );
+
+      if (existingConv) {
+        setSelectedConversation(existingConv);
+        setShowNewMessageDialog(false);
+        setNewRecipientEmail("");
+        toast.info('Conversation already exists');
+        setIsSending(false);
+        return;
+      }
+
+      // Create new conversation with first message
+      const firstMessage = "Hi! I'd like to connect with you.";
+      const { data, error } = await supabase.rpc('send_message', {
+        p_sender_id: currentUserId,
+        p_recipient_id: recipient.id,
+        p_content: firstMessage
+      });
+
+      if (error) {
+        console.error('Error creating conversation:', error);
+        toast.error('Failed to start conversation');
+        setIsSending(false);
+        return;
+      }
+
+      if (!data) {
+        console.error('No data returned from send_message');
+        toast.error('Failed to start conversation');
+        setIsSending(false);
+        return;
+      }
+
+      toast.success('Conversation started!');
+      setShowNewMessageDialog(false);
+      setNewRecipientEmail("");
+      
+      // Refresh conversations and select the new one
+      await fetchConversations();
+      
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      toast.error('Failed to start conversation');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation || !currentUserId) return;
+
+    setIsSending(true);
+    const messageContent = newMessage;
+    setNewMessage(""); // Clear input immediately for better UX
+
+    try {
+      const supabase = createClient();
+      
+      // Find recipient ID from the conversation
+      const { data: participants } = await supabase
+        .from('conversation_participants')
+        .select('user_id')
+        .eq('conversation_id', selectedConversation.id)
+        .neq('user_id', currentUserId);
+      
+      if (!participants || participants.length === 0) {
+        toast.error('Could not find recipient');
+        setNewMessage(messageContent);
+        return;
+      }
+
+      const recipientId = participants[0].user_id;
+
+      const { data, error } = await supabase.rpc('send_message', {
+        p_sender_id: currentUserId,
+        p_recipient_id: recipientId,
+        p_content: messageContent
+      });
+
+      if (error) {
+        console.error('Error sending message:', error);
+        toast.error('Failed to send message');
+        setNewMessage(messageContent);
+        return;
+      }
+
+      // Add the new message to the list optimistically
+      const optimisticMessage: Message = {
+        id: data.id,
+        sender: currentUserName,
+        content: messageContent,
+        timestamp: new Date().toISOString(),
+        isCurrentUser: true,
+      };
+
+      setMessages([...messages, optimisticMessage]);
+      toast.success("Message sent!");
+      
+      // Update conversation list
+      fetchConversations();
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error(`Failed to send message: ${error instanceof Error ? error.message : "Network error"}`);
@@ -260,22 +315,23 @@ export function Messages({ accessToken, currentUserName }: MessagesProps) {
 
   return (
     <div className="space-y-4">
-      {USE_MOCK_API && (
-        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-          <p className="text-blue-900 dark:text-blue-100 text-sm">
-            <strong>Development Mode:</strong> Using mock API for messaging. Messages are stored in memory for this session.
-          </p>
-        </div>
-      )}
-      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-240px)]">
         {/* Conversations List */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageCircle className="w-5 h-5" />
-              Messages
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                Messages
+              </CardTitle>
+              <Button
+                size="sm"
+                onClick={() => setShowNewMessageDialog(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                New
+              </Button>
+            </div>
             <div className="relative mt-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
@@ -442,6 +498,62 @@ export function Messages({ accessToken, currentUserName }: MessagesProps) {
           )}
         </Card>
       </div>
+
+      {/* New Message Dialog */}
+      {showNewMessageDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle>New Message</CardTitle>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                Enter the email address of the person you want to message
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Recipient Email</label>
+                <Input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={newRecipientEmail}
+                  onChange={(e) => setNewRecipientEmail(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      startNewConversation();
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowNewMessageDialog(false);
+                    setNewRecipientEmail("");
+                  }}
+                  disabled={isSending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={startNewConversation}
+                  disabled={isSending || !newRecipientEmail.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isSending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    'Start Conversation'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

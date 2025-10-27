@@ -1,0 +1,6 @@
+# Exclude API folder from GitHub Pages deployment
+api/
+.env
+.env.local
+node_modules/
+*.log

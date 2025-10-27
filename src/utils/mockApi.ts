@@ -35,7 +35,7 @@ export const mockApi = {
     
     // Filter conversations for current user
     const conversations = Array.from(mockConversations.values())
-      .filter(conv => {
+      .filter(_conv => {
         // Find messages involving this user
         const userMessages = mockMessages.filter(
           msg => msg.senderName === currentUserName || msg.recipientName === currentUserName

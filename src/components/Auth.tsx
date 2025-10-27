@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Brain } from "lucide-react";
+import { Brain, Upload, User, Mail, Lock, Briefcase, Users, Sparkles, Building2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
@@ -18,6 +18,7 @@ interface SignUpFormData {
   role: string;
   team: string;
   expertise: string;
+  department: string;
 }
 
 export function Auth({ onAuthSuccess }: AuthProps) {
@@ -28,7 +29,8 @@ export function Auth({ onAuthSuccess }: AuthProps) {
     password: "",
     role: "",
     team: "",
-    expertise: ""
+    expertise: "",
+    department: ""
   });
 
   const handleLogin = async () => {
@@ -130,6 +132,11 @@ export function Auth({ onAuthSuccess }: AuthProps) {
       }
 
       // Then create their profile
+      // Convert expertise string to array (split by comma)
+      const expertiseArray = signUpData.expertise 
+        ? signUpData.expertise.split(',').map(s => s.trim()).filter(s => s.length > 0)
+        : [];
+
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .insert([
@@ -138,8 +145,9 @@ export function Auth({ onAuthSuccess }: AuthProps) {
             full_name: signUpData.full_name,
             email: signUpData.email,
             role: signUpData.role || 'User',
-            team: signUpData.team,
-            expertise: signUpData.expertise
+            team: signUpData.team || null,
+            expertise: expertiseArray,
+            department: signUpData.department || null
           }
         ])
         .select()
@@ -239,79 +247,176 @@ export function Auth({ onAuthSuccess }: AuthProps) {
 
               <TabsContent value="signup" className="mt-4 space-y-4">
                 <form onSubmit={(e) => { e.preventDefault(); handleSignUp(); }} className="space-y-4">
+                  {/* Avatar Placeholder */}
+                  <div className="flex flex-col items-center py-4 space-y-2">
+                    <div className="relative">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-semibold">
+                        <User className="w-10 h-10" />
+                      </div>
+                      <div className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white cursor-pointer hover:bg-blue-700 transition-colors">
+                        <Upload className="w-4 h-4 text-white" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Profile picture (coming soon)</p>
+                  </div>
+
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="full_name">Full Name</Label>
-                      <Input
-                        id="full_name"
-                        name="full_name"
-                        placeholder="Enter your full name"
-                        required
-                        value={signUpData.full_name}
-                        onChange={handleSignUpInputChange}
-                        className="h-9"
-                      />
+                    {/* Personal Information */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <User className="w-4 h-4" />
+                        <span>Personal Information</span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="full_name" className="flex items-center gap-2">
+                          Full Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="full_name"
+                          name="full_name"
+                          placeholder="John Doe"
+                          required
+                          value={signUpData.full_name}
+                          onChange={handleSignUpInputChange}
+                          className="h-10"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="flex items-center gap-2">
+                          <Mail className="w-3.5 h-3.5" />
+                          Email <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="john.doe@mrisoftware.com"
+                          required
+                          value={signUpData.email}
+                          onChange={handleSignUpInputChange}
+                          className="h-10"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="password" className="flex items-center gap-2">
+                          <Lock className="w-3.5 h-3.5" />
+                          Password <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="password"
+                          name="password"
+                          type="password"
+                          placeholder="Minimum 6 characters"
+                          required
+                          value={signUpData.password}
+                          onChange={handleSignUpInputChange}
+                          className="h-10"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        placeholder="you@mrisoftware.com"
-                        required
-                        value={signUpData.email}
-                        onChange={handleSignUpInputChange}
-                        className="h-9"
-                      />
+
+                    {/* Professional Information */}
+                    <div className="space-y-3 pt-2 border-t">
+                      <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <Briefcase className="w-4 h-4" />
+                        <span>Professional Details</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="role">
+                            Role <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="role"
+                            name="role"
+                            placeholder="Software Engineer"
+                            required
+                            value={signUpData.role}
+                            onChange={handleSignUpInputChange}
+                            className="h-10"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="team" className="flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5" />
+                            Team <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="team"
+                            name="team"
+                            placeholder="Platform Team"
+                            required
+                            value={signUpData.team}
+                            onChange={handleSignUpInputChange}
+                            className="h-10"
+                          />
+                        </div>
+                      </div>
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        placeholder="Create a password"
-                        required
-                        value={signUpData.password}
-                        onChange={handleSignUpInputChange}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="role">Role</Label>
-                      <Input
-                        id="role"
-                        name="role"
-                        placeholder="Enter your role"
-                        required
-                        value={signUpData.role}
-                        onChange={handleSignUpInputChange}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="team">Team</Label>
-                      <Input
-                        id="team"
-                        name="team"
-                        placeholder="Enter your team"
-                        required
-                        value={signUpData.team}
-                        onChange={handleSignUpInputChange}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="expertise">Area of Expertise</Label>
+                      <Label htmlFor="expertise" className="flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Skills & Expertise <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         id="expertise"
                         name="expertise"
-                        placeholder="Enter your area of expertise"
+                        placeholder="React, TypeScript, Node.js, PostgreSQL"
                         required
                         value={signUpData.expertise}
                         onChange={handleSignUpInputChange}
-                        className="h-9"
+                        className="h-10"
                       />
+                      <p className="text-xs text-muted-foreground flex items-start gap-1">
+                        <span className="text-blue-600">💡</span>
+                        Separate multiple skills with commas - this helps others find you!
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="department" className="flex items-center gap-2">
+                        <Building2 className="w-3.5 h-3.5" />
+                        Department <span className="text-red-500">*</span>
+                      </Label>
+                      <select
+                        id="department"
+                        name="department"
+                        required
+                        value={signUpData.department}
+                        onChange={(e) => setSignUpData(prev => ({ ...prev, department: e.target.value }))}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      >
+                        <option value="">Select your department</option>
+                        <option value="Application Administration">Application Administration</option>
+                        <option value="Business Operations">Business Operations</option>
+                        <option value="Client Experience">Client Experience</option>
+                        <option value="Client Support">Client Support</option>
+                        <option value="Diversity, Equity, & Inclusion">Diversity, Equity, & Inclusion</option>
+                        <option value="Education Services">Education Services</option>
+                        <option value="Finance">Finance</option>
+                        <option value="GRC Team">GRC Team</option>
+                        <option value="IT">IT</option>
+                        <option value="InfoSec">InfoSec</option>
+                        <option value="Revenue Applications">Revenue Applications</option>
+                        <option value="Legal">Legal</option>
+                        <option value="MACS-Everyone">MACS-Everyone</option>
+                        <option value="Managed Services">Managed Services</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Partner Connect">Partner Connect</option>
+                        <option value="Product Development">Product Development</option>
+                        <option value="Professional Services">Professional Services</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Sales Enablement">Sales Enablement</option>
+                        <option value="Sales Engineering">Sales Engineering</option>
+                        <option value="Solution Practice - NA">Solution Practice - NA</option>
+                        <option value="Talent Management">Talent Management</option>
+                        <option value="Workplace Experience">Workplace Experience</option>
+                      </select>
                     </div>
                     <Button
                       type="submit"
@@ -340,3 +445,5 @@ export function Auth({ onAuthSuccess }: AuthProps) {
     </div>
   );
 }
+
+export default Auth;

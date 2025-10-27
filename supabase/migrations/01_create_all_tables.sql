@@ -1,78 +1,58 @@
--- Create tables if they don't exist
-DO $$ 
-BEGIN
-    -- Create activity_log table
-    IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'activity_log') THEN
-        CREATE TABLE public.activity_log (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID REFERENCES auth.users(id),
-            action TEXT NOT NULL,
-            topic TEXT,
-            entity_type TEXT,
-            entity_id UUID,
-            type TEXT,
-            created_at TIMESTAMPTZ DEFAULT NOW()
-        );
-    END IF;
+-- Create profiles table
+CREATE TABLE IF NOT EXISTS profiles (
+	id uuid PRIMARY KEY,
+	full_name text,
+	email text UNIQUE,
+	avatar_url text,
+	created_at timestamp DEFAULT now()
+);
 
-    -- Create knowledge_items table
-    IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'knowledge_items') THEN
-        CREATE TABLE public.knowledge_items (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            title TEXT NOT NULL,
-            content TEXT,
-            author_id UUID REFERENCES auth.users(id),
-            views INTEGER DEFAULT 0,
-            created_at TIMESTAMPTZ DEFAULT NOW(),
-            updated_at TIMESTAMPTZ DEFAULT NOW()
-        );
-    END IF;
+-- Create knowledge_items table
+CREATE TABLE IF NOT EXISTS knowledge_items (
+	id serial PRIMARY KEY,
+	author_id uuid REFERENCES profiles(id),
+	title text NOT NULL,
+	description text,
+	views integer DEFAULT 0,
+	created_at timestamp DEFAULT now()
+);
 
-    -- Create collaborations table
-    IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'collaborations') THEN
-        CREATE TABLE public.collaborations (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID REFERENCES auth.users(id),
-            knowledge_item_id UUID REFERENCES knowledge_items(id),
-            type TEXT NOT NULL, -- 'edit', 'comment', 'review', 'share'
-            content TEXT,
-            created_at TIMESTAMPTZ DEFAULT NOW()
-        );
-    END IF;
+-- Create collaborations table
+CREATE TABLE IF NOT EXISTS collaborations (
+	id serial PRIMARY KEY,
+	user_id uuid REFERENCES profiles(id),
+	knowledge_item_id integer REFERENCES knowledge_items(id),
+	type text,
+	created_at timestamp DEFAULT now()
+);
 
-    -- Create user_connections table
-    IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'user_connections') THEN
-        CREATE TABLE public.user_connections (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID REFERENCES auth.users(id),
-            connected_with UUID REFERENCES auth.users(id),
-            status TEXT DEFAULT 'pending',
-            created_at TIMESTAMPTZ DEFAULT NOW(),
-            updated_at TIMESTAMPTZ DEFAULT NOW()
-        );
-    END IF;
+-- Create user_connections table
+CREATE TABLE IF NOT EXISTS user_connections (
+	id serial PRIMARY KEY,
+	user_id uuid REFERENCES profiles(id),
+	connected_with uuid REFERENCES profiles(id),
+	status text,
+	created_at timestamp DEFAULT now()
+);
 
-    -- Create dashboard_stats table
-    IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'dashboard_stats') THEN
-        CREATE TABLE public.dashboard_stats (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            active_connections INTEGER DEFAULT 0,
-            knowledge_items INTEGER DEFAULT 0,
-            team_collaborations INTEGER DEFAULT 0,
-            hours_saved INTEGER DEFAULT 0,
-            updated_at TIMESTAMPTZ DEFAULT NOW()
-        );
-    END IF;
+-- Create activity_log table
+CREATE TABLE IF NOT EXISTS activity_log (
+	id serial PRIMARY KEY,
+	user_id uuid REFERENCES profiles(id),
+	action text,
+	topic text,
+	entity_type text,
+	entity_id integer,
+	type text,
+	created_at timestamp DEFAULT now()
+);
 
-    -- Create historical_stats table
-    IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'historical_stats') THEN
-        CREATE TABLE public.historical_stats (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            previous_connections INTEGER DEFAULT 0,
-            previous_items INTEGER DEFAULT 0,
-            previous_collaborations INTEGER DEFAULT 0,
-            previous_hours INTEGER DEFAULT 0,
-            recorded_at TIMESTAMPTZ DEFAULT NOW()
-        );
-    END IF;
-END $$;
+-- Create historical_stats table
+CREATE TABLE IF NOT EXISTS historical_stats (
+	id serial PRIMARY KEY,
+	previous_connections integer,
+	previous_items integer,
+	previous_collaborations integer,
+	previous_hours integer,
+	recorded_at timestamp DEFAULT now()
+);

@@ -1,6 +1,6 @@
 import { LayoutGrid, BookmarkIcon, ChevronDown, Sun, Moon, ExternalLink } from "lucide-react";
 import { Button } from "./button";
-import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+import { Avatar, AvatarFallback } from "./avatar";
 
 interface HeaderProps {
   email: string;

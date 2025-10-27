@@ -11,11 +11,9 @@ import {
   Users, 
   Calendar, 
   TrendingUp,
-  Filter,
   X,
   CheckCircle
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 interface Project {
   id: string;
@@ -96,7 +94,6 @@ export function ProjectGraph({ open, onOpenChange, projects }: ProjectGraphProps
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectDetailOpen, setIsProjectDetailOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"all" | "grid">("all");
 
   // Group projects by department
   const projectsByDepartment = useMemo(() => {
@@ -203,43 +200,55 @@ export function ProjectGraph({ open, onOpenChange, projects }: ProjectGraphProps
               </DialogDescription>
             </DialogHeader>
 
-            {/* Stats - Improved Visual Hierarchy */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-blue-600 dark:text-blue-400">Total Projects</p>
-                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                    <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            {/* Stats - Enhanced with Gradients and Animations */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 px-1">
+              <div className="group relative bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl p-4 border-2 border-blue-300 dark:border-blue-700 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-blue-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative flex flex-col">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                      <Building2 className="w-5 h-5 text-white" />
+                    </div>
                   </div>
+                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide mb-1">Total Projects</p>
+                  <p className="text-3xl font-bold bg-gradient-to-br from-blue-600 to-blue-800 dark:from-blue-300 dark:to-blue-100 bg-clip-text text-transparent">{stats.totalProjects}</p>
                 </div>
-                <p className="text-2xl text-blue-900 dark:text-blue-100">{stats.totalProjects}</p>
               </div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border-2 border-purple-200 dark:border-purple-800 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-purple-600 dark:text-purple-400">Departments</p>
-                  <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                    <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <div className="group relative bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-2xl p-4 border-2 border-purple-300 dark:border-purple-700 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-purple-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative flex flex-col">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                      <Users className="w-5 h-5 text-white" />
+                    </div>
                   </div>
+                  <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wide mb-1">Departments</p>
+                  <p className="text-3xl font-bold bg-gradient-to-br from-purple-600 to-purple-800 dark:from-purple-300 dark:to-purple-100 bg-clip-text text-transparent">{stats.departmentsWithProjects}</p>
                 </div>
-                <p className="text-2xl text-purple-900 dark:text-purple-100">{stats.departmentsWithProjects}</p>
               </div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border-2 border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-green-600 dark:text-green-400">In Progress</p>
-                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <div className="group relative bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-2xl p-4 border-2 border-green-300 dark:border-green-700 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-green-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative flex flex-col">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                      <TrendingUp className="w-5 h-5 text-white" />
+                    </div>
                   </div>
+                  <p className="text-xs font-semibold text-green-700 dark:text-green-300 uppercase tracking-wide mb-1">In Progress</p>
+                  <p className="text-3xl font-bold bg-gradient-to-br from-green-600 to-green-800 dark:from-green-300 dark:to-green-100 bg-clip-text text-transparent">{stats.inProgress}</p>
                 </div>
-                <p className="text-2xl text-green-900 dark:text-green-100">{stats.inProgress}</p>
               </div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border-2 border-cyan-200 dark:border-cyan-800 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-cyan-600 dark:text-cyan-400">Completed</p>
-                  <div className="w-8 h-8 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+              <div className="group relative bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 rounded-2xl p-4 border-2 border-cyan-300 dark:border-cyan-700 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative flex flex-col">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    </div>
                   </div>
+                  <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-300 uppercase tracking-wide mb-1">Completed</p>
+                  <p className="text-3xl font-bold bg-gradient-to-br from-cyan-600 to-cyan-800 dark:from-cyan-300 dark:to-cyan-100 bg-clip-text text-transparent">{stats.completed}</p>
                 </div>
-                <p className="text-2xl text-cyan-900 dark:text-cyan-100">{stats.completed}</p>
               </div>
             </div>
 
@@ -321,19 +330,27 @@ export function ProjectGraph({ open, onOpenChange, projects }: ProjectGraphProps
                   </div>
                 ) : (
                   filteredDepartments.map(([department, deptProjects]) => (
-                    <div key={department} className="space-y-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800">
-                      {/* Department Header - Improved */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-700">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-14 h-14 bg-gradient-to-br ${getDepartmentColor(department)} rounded-xl flex items-center justify-center shadow-lg shrink-0`}>
-                            <Building2 className="w-7 h-7 text-white" />
+                    <div key={department} className="space-y-4">
+                      {/* Department Header - Enhanced */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b-2 border-slate-300 dark:border-slate-700">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 bg-gradient-to-br ${getDepartmentColor(department)} rounded-xl flex items-center justify-center shadow-lg shrink-0`}>
+                            <Building2 className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <h3 className="text-lg text-slate-900 dark:text-slate-100 mb-1">
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                               {department}
                             </h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                              {deptProjects.length} project{deptProjects.length !== 1 ? 's' : ''} • {deptProjects.filter(p => p.status === "In Progress").length} active
+                            <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                {deptProjects.length} project{deptProjects.length !== 1 ? 's' : ''}
+                              </span>
+                              <span className="text-slate-400">•</span>
+                              <span className="inline-flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                {deptProjects.filter(p => p.status === "In Progress").length} active
+                              </span>
                             </p>
                           </div>
                         </div>
@@ -350,7 +367,7 @@ export function ProjectGraph({ open, onOpenChange, projects }: ProjectGraphProps
                         )}
                       </div>
 
-                      {/* Projects Grid - Improved Cards */}
+                      {/* Projects Grid - Enhanced Cards */}
                       {deptProjects.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {deptProjects.map((project) => {
@@ -359,18 +376,18 @@ export function ProjectGraph({ open, onOpenChange, projects }: ProjectGraphProps
                             return (
                               <div
                                 key={project.id}
-                                className="group bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:shadow-xl hover:border-blue-400 dark:hover:border-blue-600 hover:scale-[1.02] transition-all cursor-pointer"
+                                className="group relative bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:shadow-xl hover:border-blue-400 dark:hover:border-blue-500 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
                                 onClick={() => {
                                   setSelectedProject(project);
                                   setIsProjectDetailOpen(true);
                                 }}
                               >
-                                {/* Project Header - Improved */}
-                                <div className="flex items-start justify-between mb-4">
-                                  <h4 className="text-base text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 flex-1 pr-2">
+                                {/* Project Header */}
+                                <div className="flex items-start justify-between mb-3">
+                                  <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 flex-1 pr-2">
                                     {project.name}
                                   </h4>
-                                  <Badge className={`${getStatusColor(project.status)} text-white text-xs shrink-0 px-2 py-1`}>
+                                  <Badge className={`${getStatusColor(project.status)} text-white text-xs shrink-0 px-2.5 py-0.5 shadow-sm font-medium`}>
                                     {project.status}
                                   </Badge>
                                 </div>

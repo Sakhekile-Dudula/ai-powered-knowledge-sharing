@@ -2,15 +2,17 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Lightbulb, TrendingUp, AlertCircle, CheckCircle, Clock, ThumbsUp, MessageSquare, Share2, Loader2, Plus } from "lucide-react";
+import { Lightbulb, TrendingUp, AlertCircle, CheckCircle, Clock, ThumbsUp, MessageSquare, Share2, Loader2, Plus, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ScrollArea } from "./ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { projectId } from "../utils/supabase/info";
 import { toast } from "sonner";
+import { EnhancedAnalytics } from "./EnhancedAnalytics";
 
 interface InsightsHubProps {
   accessToken: string | null;
@@ -245,6 +247,19 @@ export function InsightsHub({ accessToken }: InsightsHubProps) {
 
   return (
     <div className="space-y-6">
+      <Tabs defaultValue="insights" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="insights" className="flex items-center gap-2">
+            <Lightbulb className="w-4 h-4" />
+            Insights
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Analytics
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="insights" className="space-y-6 mt-6">
       {/* Header */}
       <Card>
         <CardContent className="pt-6">
@@ -657,6 +672,12 @@ export function InsightsHub({ accessToken }: InsightsHubProps) {
         </DialogContent>
       </Dialog>
       )}
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-6">
+          {accessToken && <EnhancedAnalytics accessToken={accessToken} />}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

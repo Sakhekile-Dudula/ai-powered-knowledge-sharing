@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Brain, Search, Users, Network, MessageSquare, Lightbulb, Moon, LogOut } from "lucide-react";
+import { Brain, Search, Users, Network, MessageSquare, Lightbulb, Moon, LogOut, HelpCircle } from "lucide-react";
 import { Auth } from "./components/Auth";
 import { Dashboard } from "./components/Dashboard";
 import { KnowledgeSearch } from "./components/KnowledgeSearch";
@@ -14,6 +14,8 @@ import { User } from "@supabase/supabase-js";
 import { UserProfile } from "./types";
 import { HelpBot } from "./components/HelpBot";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
+import { Notifications } from "./components/Notifications";
+import { QASystem } from "./components/QASystem";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -141,12 +143,12 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       <Toaster />
       
       {/* Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 z-50 shadow-sm flex-shrink-0">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
@@ -172,6 +174,7 @@ export default function App() {
                     .slice(0, 2)}
                 </span>
               </div>
+              <Notifications userId={userAccount.id} />
               <Button
                 variant="ghost"
                 size="sm"
@@ -194,20 +197,21 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 overflow-y-auto">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Tabs */}
-        <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="flex flex-col gap-2 w-full">
+        <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="flex flex-col gap-2 w-full mb-8">
           <div 
             role="tablist" 
             aria-orientation="horizontal" 
             data-slot="tabs-list" 
-            className="bg-muted text-muted-foreground h-9 items-center justify-center rounded-xl p-[3px] grid grid-cols-6 w-full max-w-4xl mx-auto mb-8"
+            className="bg-muted text-muted-foreground h-auto items-center justify-center rounded-xl p-1 flex flex-wrap gap-1 w-full"
           >
             <Button
               type="button"
               role="tab"
               variant={activeTab === "dashboard" ? "default" : "ghost"}
-              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2"
+              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
               onClick={() => setActiveTab("dashboard")}
             >
               <Brain className="w-4 h-4" />
@@ -217,7 +221,7 @@ export default function App() {
               type="button"
               role="tab"
               variant={activeTab === "search" ? "default" : "ghost"}
-              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2"
+              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
               onClick={() => setActiveTab("search")}
             >
               <Search className="w-4 h-4" />
@@ -226,8 +230,18 @@ export default function App() {
             <Button
               type="button"
               role="tab"
+              variant={activeTab === "knowledge" ? "default" : "ghost"}
+              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
+              onClick={() => setActiveTab("knowledge")}
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Q&A</span>
+            </Button>
+            <Button
+              type="button"
+              role="tab"
               variant={activeTab === "experts" ? "default" : "ghost"}
-              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2"
+              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
               onClick={() => setActiveTab("experts")}
             >
               <Users className="w-4 h-4" />
@@ -237,7 +251,7 @@ export default function App() {
               type="button"
               role="tab"
               variant={activeTab === "projects" ? "default" : "ghost"}
-              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2"
+              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
               onClick={() => setActiveTab("projects")}
             >
               <Network className="w-4 h-4" />
@@ -247,7 +261,7 @@ export default function App() {
               type="button"
               role="tab"
               variant={activeTab === "messages" ? "default" : "ghost"}
-              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2"
+              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
               onClick={() => setActiveTab("messages")}
             >
               <MessageSquare className="w-4 h-4" />
@@ -257,7 +271,7 @@ export default function App() {
               type="button"
               role="tab"
               variant={activeTab === "insights" ? "default" : "ghost"}
-              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2"
+              className="data-[state=active]:bg-card dark:data-[state=active]:text-foreground flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4 h-8"
               onClick={() => setActiveTab("insights")}
             >
               <Lightbulb className="w-4 h-4" />
@@ -273,6 +287,12 @@ export default function App() {
         {activeTab === "search" && accessToken && (
           <KnowledgeSearch accessToken={accessToken} />
         )}
+        {activeTab === "knowledge" && accessToken && userAccount && (
+          <QASystem 
+            userId={userAccount.id}
+            userName={userProfile?.full_name || userAccount.email || "User"}
+          />
+        )}
         {activeTab === "experts" && accessToken && (
           <ExpertFinder
             accessToken={accessToken}
@@ -284,13 +304,13 @@ export default function App() {
         )}
         {activeTab === "messages" && accessToken && (
           <Messages
-            accessToken={accessToken}
             currentUserName={userProfile?.full_name || userAccount.email || "You"}
           />
         )}
         {activeTab === "insights" && accessToken && (
           <InsightsHub accessToken={accessToken} />
         )}
+        </div>
       </main>
       
       {/* Help Bot and Keyboard Shortcuts */}

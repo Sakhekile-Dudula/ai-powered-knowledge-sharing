@@ -195,10 +195,12 @@
     font-feature-settings: var(--default-font-feature-settings, normal);
     font-variation-settings: var(--default-font-variation-settings, normal);
     -webkit-tap-highlight-color: transparent;
+    font-size: 16px;
   }
 
   body {
     line-height: inherit;
+    font-size: 1.0625rem;
   }
 
   hr {
@@ -3351,5 +3353,106 @@ html {
   to {
     opacity: var(--tw-exit-opacity, 1);
     transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1)) rotate(var(--tw-exit-rotate, 0));
+  }
+}
+
+/* Print Styles for Knowledge Items */
+@media print {
+  /* Hide unnecessary elements */
+  .print\\:hidden,
+  button:not(.print\\:block),
+  nav,
+  header:not(.print\\:block),
+  footer:not(.print\\:block) {
+    display: none !important;
+  }
+
+  /* Full width for print */
+  .print\\:max-w-full {
+    max-width: 100% !important;
+  }
+
+  /* Clean backgrounds */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Remove shadows and borders */
+  * {
+    box-shadow: none !important;
+  }
+
+  /* Better typography for print */
+  .print\\:text-2xl {
+    font-size: 1.5rem !important;
+    font-weight: bold !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .print\\:text-base {
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .print\\:text-black {
+    color: black !important;
+  }
+
+  .print\\:font-semibold {
+    font-weight: 600 !important;
+  }
+
+  /* Grid adjustments */
+  .print\\:grid-cols-1 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  .print\\:gap-2 {
+    gap: 0.5rem !important;
+  }
+
+  .print\\:space-y-6 > * + * {
+    margin-top: 1.5rem !important;
+  }
+
+  /* Badge adjustments */
+  .print\\:border {
+    border: 1px solid black !important;
+  }
+
+  .print\\:border-black {
+    border-color: black !important;
+  }
+
+  .print\\:bg-white {
+    background-color: white !important;
+  }
+
+  .print\\:border-0 {
+    border: 0 !important;
+  }
+
+  .print\\:p-0 {
+    padding: 0 !important;
+  }
+
+  /* Page breaks */
+  .print\\:break-before {
+    page-break-before: always !important;
+  }
+
+  .print\\:break-after {
+    page-break-after: always !important;
+  }
+
+  /* Avoid breaking inside elements */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid !important;
+  }
+
+  /* Set page margins */
+  @page {
+    margin: 2cm;
   }
 }
