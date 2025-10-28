@@ -89,6 +89,8 @@ export function Dashboard({ accessToken }: DashboardProps) {
         let { data: statsData, error: statsError } = await supabase
           .rpc('get_dashboard_stats');
 
+        console.log('Dashboard stats response:', { statsData, statsError });
+
         if (statsError) {
           console.warn('Failed to fetch dashboard stats:', statsError.message);
           // Use default values instead of throwing
