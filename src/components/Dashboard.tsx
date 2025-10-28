@@ -358,7 +358,7 @@ export function Dashboard({ accessToken }: DashboardProps) {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">Active Connections</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Team Members</p>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className="text-slate-900 dark:text-slate-100">{stats.activeConnections.value}</span>
                       {!isNaN(stats.activeConnections.percentage) && (
@@ -681,15 +681,15 @@ export function Dashboard({ accessToken }: DashboardProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Active Connections Dialog */}
+      {/* Team Members Dialog */}
       <Dialog open={isConnectionsDialogOpen} onOpenChange={setIsConnectionsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Your Active Connections</DialogTitle>
+            <DialogTitle>Team Members</DialogTitle>
             <DialogDescription>
               {connections.length === 0 
-                ? "No connections found" 
-                : `Showing ${connections.length} ${connections.length === 1 ? 'person' : 'people'} in your network`}
+                ? "No team members found" 
+                : `${connections.length} ${connections.length === 1 ? 'person' : 'people'} available to connect with`}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
