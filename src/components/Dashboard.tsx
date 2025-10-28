@@ -229,7 +229,9 @@ export function Dashboard({ accessToken }: DashboardProps) {
   }, [accessToken]);
 
   const calculatePercentageChange = (previous: number, current: number) => {
-    if (previous === 0) return 0;
+    if (previous === 0 && current === 0) return 0;
+    if (previous === 0 && current > 0) return 100; // New items, show 100% growth
+    if (current === 0) return -100; // Lost all items
     return Math.round(((current - previous) / previous) * 100);
   };
 
