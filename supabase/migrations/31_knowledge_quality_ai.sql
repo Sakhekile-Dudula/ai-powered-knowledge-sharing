@@ -1,26 +1,29 @@
 -- Knowledge Quality & AI Features Migration
 
--- Knowledge Items table (for storing technical content)
-CREATE TABLE IF NOT EXISTS knowledge_items (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  author_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  author_name TEXT NOT NULL,
-  category TEXT,
-  tags TEXT[],
-  is_deprecated BOOLEAN DEFAULT false,
-  deprecation_reason TEXT,
-  freshness_score INTEGER DEFAULT 100 CHECK (freshness_score >= 0 AND freshness_score <= 100),
-  version INTEGER DEFAULT 1,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Add new columns to existing knowledge_items table
+ALTER TABLE knowledge_items 
+  ADD COLUMN IF NOT EXISTS content TEXT,
+  ADD COLUMN IF NOT EXISTS author_name TEXT,
+  ADD COLUMN IF NOT EXISTS category TEXT,
+  ADD COLUMN IF NOT EXISTS tags TEXT[],
+  ADD COLUMN IF NOT EXISTS is_deprecated BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS deprecation_reason TEXT,
+  ADD COLUMN IF NOT EXISTS freshness_score INTEGER DEFAULT 100 CHECK (freshness_score >= 0 AND freshness_score <= 100),
+  ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
--- Peer Reviews table
+-- Update existing rows to have default values
+UPDATE knowledge_items 
+SET 
+  content = COALESCE(content, description, ''),
+  author_name = COALESCE(author_name, 'Unknown'),
+  updated_at = COALESCE(updated_at, created_at)
+WHERE content IS NULL OR author_name IS NULL OR updated_at IS NULL;
+
+-- Peer Reviews table (using INTEGER for knowledge_item_id to match existing schema)
 CREATE TABLE IF NOT EXISTS peer_reviews (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  knowledge_item_id UUID REFERENCES knowledge_items(id) ON DELETE CASCADE,
+  id SERIAL PRIMARY KEY,
+  knowledge_item_id INTEGER REFERENCES knowledge_items(id) ON DELETE CASCADE,
   reviewer_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   reviewer_name TEXT NOT NULL,
   status TEXT CHECK (status IN ('pending', 'approved', 'rejected', 'needs_changes')) DEFAULT 'pending',
@@ -30,10 +33,10 @@ CREATE TABLE IF NOT EXISTS peer_reviews (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Knowledge Versions table (version history)
+-- Knowledge Versions table (version history - using INTEGER for knowledge_item_id)
 CREATE TABLE IF NOT EXISTS knowledge_versions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  knowledge_item_id UUID REFERENCES knowledge_items(id) ON DELETE CASCADE,
+  id SERIAL PRIMARY KEY,
+  knowledge_item_id INTEGER REFERENCES knowledge_items(id) ON DELETE CASCADE,
   version_number INTEGER NOT NULL,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
@@ -44,7 +47,7 @@ CREATE TABLE IF NOT EXISTS knowledge_versions (
 
 -- AI Chat History table
 CREATE TABLE IF NOT EXISTS ai_chat_history (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id SERIAL PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   role TEXT CHECK (role IN ('user', 'assistant')) NOT NULL,
   content TEXT NOT NULL,
@@ -52,21 +55,21 @@ CREATE TABLE IF NOT EXISTS ai_chat_history (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Auto-generated tags table
+-- Auto-generated tags table (using INTEGER for content_id to support knowledge_items)
 CREATE TABLE IF NOT EXISTS auto_tags (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  content_id UUID NOT NULL,
+  id SERIAL PRIMARY KEY,
+  content_id INTEGER NOT NULL,
   content_type TEXT NOT NULL, -- 'knowledge_item', 'project', 'profile'
   tag TEXT NOT NULL,
   confidence FLOAT CHECK (confidence >= 0 AND confidence <= 1),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(content_id, tag)
+  UNIQUE(content_id, content_type, tag)
 );
 
--- Document summaries table
+-- Document summaries table (using INTEGER for document_id to support knowledge_items)
 CREATE TABLE IF NOT EXISTS document_summaries (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  document_id UUID NOT NULL,
+  id SERIAL PRIMARY KEY,
+  document_id INTEGER NOT NULL,
   document_type TEXT NOT NULL,
   summary TEXT NOT NULL,
   key_points TEXT[],
@@ -77,7 +80,7 @@ CREATE TABLE IF NOT EXISTS document_summaries (
 
 -- Suggested connections table
 CREATE TABLE IF NOT EXISTS suggested_connections (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id SERIAL PRIMARY KEY,
   person1_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   person2_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   shared_interests TEXT[],
@@ -106,18 +109,22 @@ CREATE INDEX IF NOT EXISTS idx_suggested_connections_person2 ON suggested_connec
 -- Knowledge Items
 ALTER TABLE knowledge_items ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view knowledge items" ON knowledge_items;
 CREATE POLICY "Anyone can view knowledge items"
   ON knowledge_items FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can create knowledge items" ON knowledge_items;
 CREATE POLICY "Users can create knowledge items"
   ON knowledge_items FOR INSERT
   WITH CHECK (auth.uid() = author_id);
 
+DROP POLICY IF EXISTS "Authors can update their knowledge items" ON knowledge_items;
 CREATE POLICY "Authors can update their knowledge items"
   ON knowledge_items FOR UPDATE
   USING (auth.uid() = author_id);
 
+DROP POLICY IF EXISTS "Authors can delete their knowledge items" ON knowledge_items;
 CREATE POLICY "Authors can delete their knowledge items"
   ON knowledge_items FOR DELETE
   USING (auth.uid() = author_id);
@@ -125,14 +132,17 @@ CREATE POLICY "Authors can delete their knowledge items"
 -- Peer Reviews
 ALTER TABLE peer_reviews ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view peer reviews" ON peer_reviews;
 CREATE POLICY "Anyone can view peer reviews"
   ON peer_reviews FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can create peer reviews" ON peer_reviews;
 CREATE POLICY "Users can create peer reviews"
   ON peer_reviews FOR INSERT
   WITH CHECK (auth.uid() = reviewer_id);
 
+DROP POLICY IF EXISTS "Reviewers can update their reviews" ON peer_reviews;
 CREATE POLICY "Reviewers can update their reviews"
   ON peer_reviews FOR UPDATE
   USING (auth.uid() = reviewer_id);
@@ -140,10 +150,12 @@ CREATE POLICY "Reviewers can update their reviews"
 -- Knowledge Versions
 ALTER TABLE knowledge_versions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view knowledge versions" ON knowledge_versions;
 CREATE POLICY "Anyone can view knowledge versions"
   ON knowledge_versions FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "System can create versions" ON knowledge_versions;
 CREATE POLICY "System can create versions"
   ON knowledge_versions FOR INSERT
   WITH CHECK (true);
@@ -151,10 +163,12 @@ CREATE POLICY "System can create versions"
 -- AI Chat History
 ALTER TABLE ai_chat_history ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own chat history" ON ai_chat_history;
 CREATE POLICY "Users can view their own chat history"
   ON ai_chat_history FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create chat messages" ON ai_chat_history;
 CREATE POLICY "Users can create chat messages"
   ON ai_chat_history FOR INSERT
   WITH CHECK (auth.uid() = user_id);
@@ -162,10 +176,12 @@ CREATE POLICY "Users can create chat messages"
 -- Auto Tags
 ALTER TABLE auto_tags ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view auto tags" ON auto_tags;
 CREATE POLICY "Anyone can view auto tags"
   ON auto_tags FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "System can create auto tags" ON auto_tags;
 CREATE POLICY "System can create auto tags"
   ON auto_tags FOR INSERT
   WITH CHECK (true);
@@ -173,10 +189,12 @@ CREATE POLICY "System can create auto tags"
 -- Document Summaries
 ALTER TABLE document_summaries ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view document summaries" ON document_summaries;
 CREATE POLICY "Anyone can view document summaries"
   ON document_summaries FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "System can create summaries" ON document_summaries;
 CREATE POLICY "System can create summaries"
   ON document_summaries FOR INSERT
   WITH CHECK (true);
@@ -184,14 +202,17 @@ CREATE POLICY "System can create summaries"
 -- Suggested Connections
 ALTER TABLE suggested_connections ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their suggested connections" ON suggested_connections;
 CREATE POLICY "Users can view their suggested connections"
   ON suggested_connections FOR SELECT
   USING (auth.uid() = person1_id OR auth.uid() = person2_id);
 
+DROP POLICY IF EXISTS "System can create connection suggestions" ON suggested_connections;
 CREATE POLICY "System can create connection suggestions"
   ON suggested_connections FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can update their connection status" ON suggested_connections;
 CREATE POLICY "Users can update their connection status"
   ON suggested_connections FOR UPDATE
   USING (auth.uid() = person1_id OR auth.uid() = person2_id);
@@ -232,6 +253,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_knowledge_freshness ON knowledge_items;
 CREATE TRIGGER trigger_update_knowledge_freshness
   BEFORE INSERT OR UPDATE ON knowledge_items
   FOR EACH ROW
@@ -265,6 +287,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_create_knowledge_version ON knowledge_items;
 CREATE TRIGGER trigger_create_knowledge_version
   BEFORE UPDATE ON knowledge_items
   FOR EACH ROW
@@ -329,9 +352,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Insert sample knowledge items
-INSERT INTO knowledge_items (title, content, author_id, author_name, category, tags) 
+INSERT INTO knowledge_items (title, description, content, author_id, author_name, category, tags) 
 SELECT 
   'Getting Started with React Hooks',
+  'A comprehensive guide to React Hooks',
   'React Hooks allow you to use state and other React features without writing a class. The most commonly used hooks are useState and useEffect...',
   id,
   full_name,
@@ -341,9 +365,10 @@ FROM profiles
 WHERE email = 'demo@example.com'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO knowledge_items (title, content, author_id, author_name, category, tags)
+INSERT INTO knowledge_items (title, description, content, author_id, author_name, category, tags)
 SELECT 
   'Microservices Best Practices',
+  'Key principles for building microservices',
   'When building microservices, consider these key principles: single responsibility, independent deployment, decentralized data management...',
   id,
   full_name,
@@ -353,9 +378,10 @@ FROM profiles
 WHERE email = 'demo@example.com'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO knowledge_items (title, content, author_id, author_name, category, tags, is_deprecated, deprecation_reason)
+INSERT INTO knowledge_items (title, description, content, author_id, author_name, category, tags, is_deprecated, deprecation_reason)
 SELECT 
   'Using jQuery for DOM Manipulation',
+  'Legacy jQuery guide',
   'jQuery provides a simple API for DOM manipulation. Use $(selector) to select elements...',
   id,
   full_name,
