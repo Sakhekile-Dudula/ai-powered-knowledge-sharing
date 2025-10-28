@@ -8,6 +8,7 @@ import { Switch } from "./ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { createClient } from "../utils/supabase/client";
 import { toast } from 'sonner';
+import { AUTH_CONFIG, FILE_UPLOAD_CONFIG } from '../config/constants';
 
 interface SettingsProps {
   user: any;
@@ -69,13 +70,13 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image must be less than 5MB");
+      if (file.size > FILE_UPLOAD_CONFIG.MAX_FILE_SIZE_BYTES) {
+        toast.error(`Image must be less than ${FILE_UPLOAD_CONFIG.MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB`);
         return;
       }
       
-      if (!file.type.startsWith('image/')) {
-        toast.error("Please upload an image file");
+      if (!FILE_UPLOAD_CONFIG.ALLOWED_IMAGE_TYPES.includes(file.type as any)) {
+        toast.error("Please upload a valid image file (JPEG, PNG, GIF, or WebP)");
         return;
       }
 
@@ -130,8 +131,13 @@ export function Settings({ user, onProfileUpdate }: SettingsProps) {
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (passwordData.newPassword.length < AUTH_CONFIG.MIN_PASSWORD_LENGTH) {
+      toast.error(`Password must be at least ${AUTH_CONFIG.MIN_PASSWORD_LENGTH} characters`);
+      return;
+    }
+
+    if (passwordData.newPassword.length > AUTH_CONFIG.MAX_PASSWORD_LENGTH) {
+      toast.error(`Password must not exceed ${AUTH_CONFIG.MAX_PASSWORD_LENGTH} characters`);
       return;
     }
 

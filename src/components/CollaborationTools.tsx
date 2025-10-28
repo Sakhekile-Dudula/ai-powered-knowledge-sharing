@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
 import { startTeamsCall, startTeamsChat, openTeams } from '../utils/teamsIntegration';
+import { COLLABORATION_CONFIG } from '../config/constants';
 
 interface CollaborationToolsProps {
   user: any;
@@ -61,7 +62,7 @@ export function CollaborationTools({ user }: CollaborationToolsProps) {
           start_time: '14:00',
           end_time: '16:00',
           topic: 'Machine Learning Q&A',
-          max_participants: 10,
+          max_participants: COLLABORATION_CONFIG.DEFAULT_MAX_PARTICIPANTS,
           current_participants: 3
         },
         {

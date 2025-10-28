@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
 import { ScrollArea } from "./ui/scroll-area";
+import { SEARCH_CONFIG } from "../config/constants";
 
 // UI types
 interface StatsItem {
@@ -199,7 +200,7 @@ export function Dashboard({ accessToken }: DashboardProps) {
             .rpc('get_smart_suggested_connections', { 
               p_user_id: user.user.id 
             })
-            .limit(3);
+            .limit(SEARCH_CONFIG.SUGGESTED_EXPERTS_LIMIT);
 
           if (expertsError) {
             console.warn('Failed to fetch suggested connections:', expertsError.message);
@@ -268,16 +269,31 @@ export function Dashboard({ accessToken }: DashboardProps) {
       const { data: user } = await supabase.auth.getUser();
       
       if (user?.user?.id) {
-        const { data, error } = await supabase
-          .rpc('get_user_connections', { p_user_id: user.user.id });
+        // Try to get all profiles directly (simpler approach)
+        const { data: allProfiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, avatar_url, role, team, expertise, department, created_at')
+          .neq('id', user.user.id)
+          .order('created_at', { ascending: false })
+          .limit(50);
         
-        if (!error && data) {
-          setConnections(data);
+        if (!profilesError && allProfiles) {
+          // Map to the expected format
+          const mappedConnections = allProfiles.map(profile => ({
+            ...profile,
+            connection_date: profile.created_at
+          }));
+          setConnections(mappedConnections);
+          console.log('Loaded connections:', mappedConnections.length);
+        } else {
+          console.error('Error loading profiles:', profilesError);
+          setConnections([]);
         }
       }
     } catch (error) {
       console.error('Error fetching connections:', error);
       toast.error('Failed to load connections');
+      setConnections([]);
     } finally {
       setLoadingDialog(false);
     }
@@ -670,7 +686,11 @@ export function Dashboard({ accessToken }: DashboardProps) {
         <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Your Active Connections</DialogTitle>
-            <DialogDescription>People you're connected with ({connections.length})</DialogDescription>
+            <DialogDescription>
+              {connections.length === 0 
+                ? "No connections found" 
+                : `Showing ${connections.length} ${connections.length === 1 ? 'person' : 'people'} in your network`}
+            </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
             {loadingDialog ? (
@@ -680,7 +700,7 @@ export function Dashboard({ accessToken }: DashboardProps) {
             ) : connections.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-                <p>No connections yet. Start connecting with colleagues!</p>
+                <p>No team members found. Invite colleagues to join!</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-1">

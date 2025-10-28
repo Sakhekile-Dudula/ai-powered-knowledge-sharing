@@ -10,7 +10,7 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
-import { projectId } from "../utils/supabase/info";
+import { API_ENDPOINTS, getApiEndpoint } from "../utils/supabase/api-config";
 import { toast } from "sonner";
 import { EnhancedAnalytics } from "./EnhancedAnalytics";
 
@@ -48,7 +48,7 @@ export function InsightsHub({ accessToken }: InsightsHubProps) {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/insights`,
+        getApiEndpoint(API_ENDPOINTS.INSIGHTS_LIST),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -72,7 +72,7 @@ export function InsightsHub({ accessToken }: InsightsHubProps) {
 
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/insights`,
+        getApiEndpoint(API_ENDPOINTS.INSIGHTS_CREATE),
         {
           method: "POST",
           headers: {
@@ -110,7 +110,7 @@ export function InsightsHub({ accessToken }: InsightsHubProps) {
   const handleLike = async (insightId: string) => {
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/insights/${insightId}/like`,
+        getApiEndpoint(API_ENDPOINTS.INSIGHTS_LIKE(insightId)),
         {
           method: "POST",
           headers: { Authorization: `Bearer ${accessToken}` },

@@ -1,4 +1,5 @@
 -- Create office hours table
+-- Note: max_participants default should match VITE_DEFAULT_MAX_PARTICIPANTS in .env (default: 10)
 CREATE TABLE IF NOT EXISTS office_hours (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   expert_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,

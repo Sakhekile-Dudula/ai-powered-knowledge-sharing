@@ -14,7 +14,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
-import { projectId } from "../utils/supabase/info";
+import { buildApiUrl, API_ENDPOINTS } from "../utils/supabase/api-config";
 import { toast } from "sonner";
 import { KnowledgeSearchDetail } from "./KnowledgeSearchDetail";
 
@@ -45,12 +45,12 @@ export function KnowledgeSearch({ accessToken }: KnowledgeSearchProps) {
   const performSearch = async () => {
     setIsLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (searchQuery) params.append("q", searchQuery);
-      if (selectedType !== "all") params.append("type", selectedType);
+      const params: Record<string, string> = {};
+      if (searchQuery) params.q = searchQuery;
+      if (selectedType !== "all") params.type = selectedType;
 
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/knowledge/search?${params}`,
+        buildApiUrl(API_ENDPOINTS.KNOWLEDGE_SEARCH, params),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -77,7 +77,7 @@ export function KnowledgeSearch({ accessToken }: KnowledgeSearchProps) {
 
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/knowledge`,
+        buildApiUrl(API_ENDPOINTS.KNOWLEDGE_CREATE),
         {
           method: "POST",
           headers: {

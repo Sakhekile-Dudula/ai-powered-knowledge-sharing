@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
-import { projectId } from "../utils/supabase/info";
+import { API_ENDPOINTS, getApiEndpoint } from "../utils/supabase/api-config";
 import { ProjectGraph } from "./ProjectGraph";
 import { toast } from "sonner";
 
@@ -39,7 +39,7 @@ export function ProjectConnections({ accessToken }: ProjectConnectionsProps) {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/projects`,
+        getApiEndpoint(API_ENDPOINTS.PROJECTS_LIST),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -73,7 +73,7 @@ export function ProjectConnections({ accessToken }: ProjectConnectionsProps) {
 
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/projects`,
+        getApiEndpoint(API_ENDPOINTS.PROJECTS_CREATE),
         {
           method: "POST",
           headers: {

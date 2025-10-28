@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { ScrollArea } from "./ui/scroll-area";
 import { Send, Loader2 } from "lucide-react";
-import { projectId } from "../utils/supabase/info";
+import { buildApiUrl, API_ENDPOINTS, getApiEndpoint } from "../utils/supabase/api-config";
 import { toast } from "sonner";
 import { mockApi } from "../utils/mockApi";
 
@@ -60,7 +60,7 @@ export function MessagingDialog({
   const checkServerHealth = async () => {
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/health`,
+        getApiEndpoint(API_ENDPOINTS.HEALTH),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -86,7 +86,7 @@ export function MessagingDialog({
         setMessages(data.messages || []);
       } else {
         const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/messages?recipient=${encodeURIComponent(recipientName)}`,
+          buildApiUrl(API_ENDPOINTS.MESSAGES_LIST, { recipient: recipientName }),
           {
             headers: { Authorization: `Bearer ${accessToken}` },
           }
@@ -133,7 +133,7 @@ export function MessagingDialog({
         console.log("Sending message to:", recipientName, "Content:", newMessage);
         
         const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/messages`,
+          getApiEndpoint(API_ENDPOINTS.MESSAGES_CREATE),
           {
             method: "POST",
             headers: {
@@ -148,7 +148,7 @@ export function MessagingDialog({
         );
 
         console.log("Response status:", response.status);
-        console.log("Full URL:", `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/messages`);
+        console.log("Full URL:", getApiEndpoint(API_ENDPOINTS.MESSAGES_CREATE));
         
         if (response.ok) {
           const data = await response.json();

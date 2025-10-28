@@ -3,7 +3,8 @@ import { Search, FileText, MessageSquare, Code, BookOpen, X, Loader2 } from "luc
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
-import { projectId } from "../utils/supabase/info";
+import { buildApiUrl, API_ENDPOINTS } from "../utils/supabase/api-config";
+import { SEARCH_CONFIG } from "../config/constants";
 
 interface HeaderSearchProps {
   accessToken: string | null;
@@ -37,7 +38,7 @@ export function HeaderSearch({ accessToken }: HeaderSearchProps) {
 
     const timeoutId = setTimeout(() => {
       performSearch();
-    }, 300);
+    }, SEARCH_CONFIG.SEARCH_DEBOUNCE_MS);
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
@@ -51,7 +52,7 @@ export function HeaderSearch({ accessToken }: HeaderSearchProps) {
       params.append("q", searchQuery);
 
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d5b5d02c/knowledge/search?${params}`,
+        buildApiUrl(API_ENDPOINTS.KNOWLEDGE_SEARCH, { q: searchQuery }),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
