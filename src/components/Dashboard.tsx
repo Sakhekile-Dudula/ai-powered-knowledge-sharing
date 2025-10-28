@@ -338,7 +338,11 @@ export function Dashboard({ accessToken }: DashboardProps) {
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Active Connections</p>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className="text-slate-900 dark:text-slate-100">{stats.activeConnections.value}</span>
-                      <span className="text-green-600 dark:text-green-400 text-sm">+{stats.activeConnections.percentage}%</span>
+                      {!isNaN(stats.activeConnections.percentage) && (
+                        <span className="text-green-600 dark:text-green-400 text-sm">
+                          {stats.activeConnections.percentage > 0 ? '+' : ''}{stats.activeConnections.percentage}%
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="w-12 h-12 text-blue-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
@@ -355,7 +359,11 @@ export function Dashboard({ accessToken }: DashboardProps) {
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Knowledge Items</p>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className="text-slate-900 dark:text-slate-100">{stats.knowledgeItems.value}</span>
-                      <span className="text-green-600 dark:text-green-400 text-sm">+{stats.knowledgeItems.percentage}%</span>
+                      {!isNaN(stats.knowledgeItems.percentage) && (
+                        <span className="text-green-600 dark:text-green-400 text-sm">
+                          {stats.knowledgeItems.percentage > 0 ? '+' : ''}{stats.knowledgeItems.percentage}%
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="w-12 h-12 text-purple-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
@@ -372,7 +380,11 @@ export function Dashboard({ accessToken }: DashboardProps) {
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Team Collaborations</p>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className="text-slate-900 dark:text-slate-100">{stats.teamCollaborations.value}</span>
-                      <span className="text-green-600 dark:text-green-400 text-sm">+{stats.teamCollaborations.percentage}%</span>
+                      {!isNaN(stats.teamCollaborations.percentage) && (
+                        <span className="text-green-600 dark:text-green-400 text-sm">
+                          {stats.teamCollaborations.percentage > 0 ? '+' : ''}{stats.teamCollaborations.percentage}%
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="w-12 h-12 text-cyan-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
@@ -389,7 +401,11 @@ export function Dashboard({ accessToken }: DashboardProps) {
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Hours Saved</p>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className="text-slate-900 dark:text-slate-100">{stats.hoursSaved.value}</span>
-                      <span className="text-green-600 dark:text-green-400 text-sm">+{stats.hoursSaved.percentage}%</span>
+                      {!isNaN(stats.hoursSaved.percentage) && (
+                        <span className="text-green-600 dark:text-green-400 text-sm">
+                          {stats.hoursSaved.percentage > 0 ? '+' : ''}{stats.hoursSaved.percentage}%
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="w-12 h-12 text-green-600 bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center">
