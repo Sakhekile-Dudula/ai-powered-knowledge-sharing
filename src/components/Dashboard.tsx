@@ -97,6 +97,11 @@ export function Dashboard({ accessToken }: DashboardProps) {
           statsData = null;
         }
 
+        // Extract first row if data is an array
+        if (statsData && Array.isArray(statsData) && statsData.length > 0) {
+          statsData = statsData[0];
+        }
+
         // Fetch historical stats for comparison
         const { data: historicalStats, error: historicalError } = await supabase
           .rpc('get_historical_stats');
