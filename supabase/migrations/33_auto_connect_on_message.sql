@@ -1,6 +1,24 @@
 -- Auto-create or update connection when users message each other
 -- This ensures that messaging and connections stay in sync
 
+-- First, add missing columns and constraints to user_connections table if needed
+ALTER TABLE user_connections 
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- Add unique constraint if it doesn't exist (prevents duplicate connections)
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'user_connections_user_id_connected_with_key'
+  ) THEN
+    ALTER TABLE user_connections 
+    ADD CONSTRAINT user_connections_user_id_connected_with_key 
+    UNIQUE (user_id, connected_with);
+  END IF;
+END $$;
+
+-- Update send_message function to auto-create connections
 CREATE OR REPLACE FUNCTION send_message(
     p_sender_id uuid,
     p_recipient_id uuid,
@@ -17,14 +35,14 @@ DECLARE
 BEGIN
     -- Auto-create or update connection status to 'connected'
     -- Check if connection exists in either direction
-    INSERT INTO user_connections (user_id, connected_with, status)
-    VALUES (p_sender_id, p_recipient_id, 'connected')
+    INSERT INTO user_connections (user_id, connected_with, status, updated_at)
+    VALUES (p_sender_id, p_recipient_id, 'connected', NOW())
     ON CONFLICT (user_id, connected_with) 
     DO UPDATE SET status = 'connected', updated_at = NOW();
     
     -- Also ensure the reverse connection exists (bidirectional)
-    INSERT INTO user_connections (user_id, connected_with, status)
-    VALUES (p_recipient_id, p_sender_id, 'connected')
+    INSERT INTO user_connections (user_id, connected_with, status, updated_at)
+    VALUES (p_recipient_id, p_sender_id, 'connected', NOW())
     ON CONFLICT (user_id, connected_with) 
     DO UPDATE SET status = 'connected', updated_at = NOW();
     
