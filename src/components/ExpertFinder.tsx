@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Search, MapPin, Award, MessageCircle, Calendar, Star, Loader2 } from "lucide-react";
+import { Search, MapPin, Award, MessageCircle, Calendar, Star, Loader2, UserPlus, UserCheck } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Label } from "./ui/label";
@@ -24,6 +24,8 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [selectedExpert, setSelectedExpert] = useState<string>("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+  const [connectedUserIds, setConnectedUserIds] = useState<Set<string>>(new Set());
+  const [connectingIds, setConnectingIds] = useState<Set<string>>(new Set());
   
   // Calendar booking state
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = useState(false);
@@ -35,7 +37,36 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
 
   useEffect(() => {
     fetchExperts();
+    fetchConnections();
   }, [selectedDepartment]);
+
+  const fetchConnections = async () => {
+    try {
+      const { createClient } = await import("../utils/supabase/client");
+      const supabase = createClient();
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('user_connections')
+        .select('connected_with')
+        .eq('user_id', user.id)
+        .eq('status', 'connected');
+
+      if (error) {
+        console.error("Failed to fetch connections:", error);
+        return;
+      }
+
+      if (data) {
+        const connectedIds = new Set(data.map(conn => conn.connected_with));
+        setConnectedUserIds(connectedIds);
+      }
+    } catch (error) {
+      console.error("Failed to fetch connections:", error);
+    }
+  };
 
   const fetchExperts = async () => {
     setIsLoading(true);
@@ -127,6 +158,57 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
   const handleSchedule = (expert: any) => {
     setSelectedExpertForBooking(expert);
     setIsCalendarDialogOpen(true);
+  };
+
+  const handleConnect = async (expertId: string, expertName: string) => {
+    try {
+      setConnectingIds(prev => new Set(prev).add(expertId));
+      
+      const { createClient } = await import("../utils/supabase/client");
+      const supabase = createClient();
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to connect");
+        return;
+      }
+
+      // Create bidirectional connection
+      const { error: error1 } = await supabase
+        .from('user_connections')
+        .insert({
+          user_id: user.id,
+          connected_with: expertId,
+          status: 'connected'
+        });
+
+      const { error: error2 } = await supabase
+        .from('user_connections')
+        .insert({
+          user_id: expertId,
+          connected_with: user.id,
+          status: 'connected'
+        });
+
+      if (error1 || error2) {
+        console.error("Failed to create connection:", error1 || error2);
+        toast.error("Failed to connect. You may already be connected.");
+        return;
+      }
+
+      // Update local state
+      setConnectedUserIds(prev => new Set(prev).add(expertId));
+      toast.success(`Successfully connected with ${expertName}!`);
+    } catch (error) {
+      console.error("Failed to create connection:", error);
+      toast.error("Failed to connect. Please try again.");
+    } finally {
+      setConnectingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(expertId);
+        return newSet;
+      });
+    }
   };
 
   const handleBookingSubmit = async () => {
@@ -473,7 +555,33 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
                   )}
 
                   <div className="flex gap-2">
-                    <Button className="flex-1" size="sm" onClick={() => handleMessage(expert.name)}>
+                    {connectedUserIds.has(expert.id) ? (
+                      <Button variant="secondary" size="sm" disabled className="flex-1">
+                        <UserCheck className="w-4 h-4 mr-2" />
+                        Connected
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleConnect(expert.id, expert.name)}
+                        disabled={connectingIds.has(expert.id)}
+                        className="flex-1"
+                      >
+                        {connectingIds.has(expert.id) ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Connecting...
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Connect
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    <Button size="sm" onClick={() => handleMessage(expert.name)}>
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Message
                     </Button>
