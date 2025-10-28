@@ -164,6 +164,20 @@ export function Messages({ currentUserName }: MessagesProps) {
         return;
       }
 
+      // Check if users are connected
+      const { data: connection } = await supabase
+        .from('user_connections')
+        .select('id, status')
+        .or(`and(user_id.eq.${currentUserId},connected_with.eq.${recipient.id}),and(user_id.eq.${recipient.id},connected_with.eq.${currentUserId})`)
+        .eq('status', 'connected')
+        .maybeSingle();
+
+      if (!connection) {
+        toast.error('You must connect with this user first. Visit the Experts tab to send a connection request.');
+        setIsSending(false);
+        return;
+      }
+
       // Check if conversation already exists
       const existingConv = conversations.find(c => 
         c.participantName === recipient.full_name
