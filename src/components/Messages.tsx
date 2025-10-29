@@ -117,6 +117,8 @@ export function Messages({ currentUserName }: MessagesProps) {
       
       if (!user) return;
 
+      console.log('Fetching messages for conversation:', conversationId);
+
       const { data, error } = await supabase.rpc('get_conversation_messages', {
         p_conversation_id: conversationId,
         p_user_id: user.id
@@ -127,6 +129,7 @@ export function Messages({ currentUserName }: MessagesProps) {
         return;
       }
 
+      console.log('Messages fetched:', data?.length || 0, 'messages');
       if (data && Array.isArray(data)) {
         setMessages(data);
       }
@@ -244,10 +247,13 @@ export function Messages({ currentUserName }: MessagesProps) {
       if (!participants || participants.length === 0) {
         toast.error('Could not find recipient');
         setNewMessage(messageContent);
+        setIsSending(false);
         return;
       }
 
       const recipientId = participants[0].user_id;
+
+      console.log('Sending message to:', recipientId, 'Content:', messageContent);
 
       const { data, error } = await supabase.rpc('send_message', {
         p_sender_id: currentUserId,
@@ -259,12 +265,15 @@ export function Messages({ currentUserName }: MessagesProps) {
         console.error('Error sending message:', error);
         toast.error('Failed to send message');
         setNewMessage(messageContent);
+        setIsSending(false);
         return;
       }
 
-      // Add message to local state immediately
+      console.log('Message sent successfully, response:', data);
+
+      // Add message to local state immediately for instant feedback
       const newMsg: Message = {
-        id: data || Date.now().toString(),
+        id: data?.message_id || Date.now().toString(),
         sender: currentUserName,
         content: messageContent,
         timestamp: new Date().toISOString(),
@@ -272,8 +281,10 @@ export function Messages({ currentUserName }: MessagesProps) {
       };
       setMessages((prev) => [...prev, newMsg]);
 
-      // Refresh messages to ensure sync
-      await fetchMessages(selectedConversation.id);
+      // Refresh messages after a short delay to ensure DB sync
+      setTimeout(() => {
+        fetchMessages(selectedConversation.id);
+      }, 500);
 
       toast.success('Message sent!');
     } catch (error) {
