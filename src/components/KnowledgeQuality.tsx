@@ -87,11 +87,28 @@ export default function KnowledgeQuality() {
     try {
       const { data, error } = await supabase
         .from('knowledge_items')
-        .select('*')
+        .select(`
+          *,
+          profiles:author_id (
+            full_name
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setKnowledgeItems(data || []);
+      
+      // Map the data to ensure all required fields exist
+      const mappedData = (data || []).map((item: any) => ({
+        ...item,
+        content: item.content || item.description || '',
+        author_name: item.author_name || item.profiles?.full_name || 'Unknown',
+        category: item.category || 'General',
+        is_deprecated: item.is_deprecated || false,
+        freshness_score: item.freshness_score || 100,
+        version: item.version || 1
+      }));
+      
+      setKnowledgeItems(mappedData);
     } catch (error) {
       console.error('Error loading knowledge items:', error);
     } finally {
@@ -197,6 +214,11 @@ export default function KnowledgeQuality() {
 
       {loading ? (
         <div className="text-center py-8 text-slate-600 dark:text-slate-400">Loading...</div>
+      ) : knowledgeItems.length === 0 ? (
+        <div className="text-center py-8 text-slate-600 dark:text-slate-400">
+          <FileText className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+          <p>No knowledge items found. Create some content to get started!</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {knowledgeItems.map(item => (
@@ -205,7 +227,11 @@ export default function KnowledgeQuality() {
               className={`p-4 hover:shadow-lg transition-shadow cursor-pointer ${
                 item.is_deprecated ? 'border-red-300 dark:border-red-700' : ''
               }`}
-              onClick={() => setSelectedItem(item)}
+              onClick={() => {
+                console.log('Item clicked:', item);
+                setSelectedItem(item);
+                setActiveTab('review');
+              }}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
