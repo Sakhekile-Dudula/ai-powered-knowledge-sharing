@@ -274,7 +274,7 @@ export function Dashboard({ accessToken }: DashboardProps) {
           .from('user_connections')
           .select('connected_with, created_at')
           .eq('user_id', user.user.id)
-          .eq('status', 'accepted')
+          .in('status', ['accepted', 'connected'])
           .order('created_at', { ascending: false });
         
         if (connError) {
