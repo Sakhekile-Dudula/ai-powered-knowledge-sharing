@@ -40,8 +40,18 @@ interface Message {
   isCurrentUser: boolean;
 }
 
+interface RecentConnection {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url?: string;
+  department?: string;
+  connected_at: string;
+}
+
 export function Messages({ currentUserName }: MessagesProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [recentConnections, setRecentConnections] = useState<RecentConnection[]>([]);
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -65,6 +75,7 @@ export function Messages({ currentUserName }: MessagesProps) {
     };
     initializeUser();
     fetchConversations();
+    fetchRecentConnections();
   }, []);
 
   useEffect(() => {
@@ -72,6 +83,70 @@ export function Messages({ currentUserName }: MessagesProps) {
       fetchMessages(selectedConversation.id);
     }
   }, [selectedConversation, currentUserId]);
+
+  const fetchRecentConnections = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
+
+      // Get connections from the last 7 days that don't have conversations yet
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const { data: connections, error } = await supabase
+        .from('user_connections')
+        .select(`
+          connected_with,
+          created_at,
+          profiles:connected_with (
+            id,
+            full_name,
+            email,
+            avatar_url,
+            department
+          )
+        `)
+        .eq('user_id', user.id)
+        .in('status', ['connected', 'accepted'])
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching recent connections:', error);
+        return;
+      }
+
+      if (connections) {
+        // Filter out connections that already have conversations
+        const conversationParticipantIds = new Set(
+          conversations.map(conv => conv.participantEmail)
+        );
+
+        const unmessagedConnections = connections
+          .filter(conn => {
+            const profile = conn.profiles as any;
+            return profile && !conversationParticipantIds.has(profile.email);
+          })
+          .map(conn => {
+            const profile = conn.profiles as any;
+            return {
+              id: profile.id,
+              name: profile.full_name,
+              email: profile.email,
+              avatar_url: profile.avatar_url,
+              department: profile.department,
+              connected_at: conn.created_at
+            };
+          });
+
+        setRecentConnections(unmessagedConnections);
+      }
+    } catch (error) {
+      console.error('Error fetching recent connections:', error);
+    }
+  };
 
   const fetchConversations = async () => {
     setIsLoading(true);
@@ -135,6 +210,52 @@ export function Messages({ currentUserName }: MessagesProps) {
       }
     } catch (error) {
       console.error("Failed to fetch messages:", error);
+    }
+  };
+
+  const startMessageWithConnection = async (connection: RecentConnection) => {
+    if (!currentUserId) {
+      toast.error('Please log in to send messages');
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      
+      // Check if conversation already exists
+      const existingConv = conversations.find(c => 
+        c.participantEmail === connection.email
+      );
+
+      if (existingConv) {
+        // Conversation exists, just select it
+        setSelectedConversation(existingConv);
+        return;
+      }
+
+      // Send initial message to create conversation
+      const firstMessage = "Hi! Let's connect and collaborate.";
+      const { error } = await supabase.rpc('send_message', {
+        p_sender_id: currentUserId,
+        p_recipient_id: connection.id,
+        p_content: firstMessage
+      });
+
+      if (error) {
+        console.error('Error creating conversation:', error);
+        toast.error('Failed to start conversation');
+        return;
+      }
+
+      toast.success(`Started conversation with ${connection.name}!`);
+      
+      // Refresh conversations and recent connections
+      await fetchConversations();
+      await fetchRecentConnections();
+      
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      toast.error('Failed to start conversation');
     }
   };
 
@@ -209,8 +330,9 @@ export function Messages({ currentUserName }: MessagesProps) {
       setShowNewMessageDialog(false);
       setNewRecipientEmail("");
       
-      // Refresh conversations and select the new one
+      // Refresh conversations and recent connections
       await fetchConversations();
+      await fetchRecentConnections();
       
     } catch (error) {
       console.error('Error starting conversation:', error);
@@ -301,6 +423,9 @@ export function Messages({ currentUserName }: MessagesProps) {
           console.log('Refreshed messages from DB:', messagesData.length);
           setMessages(messagesData);
         }
+        
+        // Refresh recent connections to remove this person if they were there
+        await fetchRecentConnections();
       }, 800);
 
       toast.success('Message sent!');
@@ -466,10 +591,55 @@ export function Messages({ currentUserName }: MessagesProps) {
           </CardHeader>
           <CardContent className="p-0">
             <ScrollArea className="h-[calc(100vh-380px)]">
-              {filteredConversations.length === 0 ? (
+              {/* Recent Connections Section */}
+              {recentConnections.length > 0 && (
+                <div className="p-3 border-b dark:border-slate-700">
+                  <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 px-1">
+                    RECENTLY CONNECTED
+                  </h3>
+                  <div className="space-y-1">
+                    {recentConnections.map((connection) => (
+                      <button
+                        key={connection.id}
+                        onClick={() => startMessageWithConnection(connection)}
+                        className="w-full p-3 rounded-lg text-left transition-colors hover:bg-blue-50 dark:hover:bg-blue-950 border border-transparent hover:border-blue-200 dark:hover:border-blue-800"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-sm">
+                              {getInitials(connection.name)}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-slate-900 dark:text-slate-100 text-sm font-medium truncate">
+                              {connection.name}
+                            </p>
+                            {connection.department && (
+                              <p className="text-slate-500 dark:text-slate-400 text-xs truncate">
+                                {connection.department}
+                              </p>
+                            )}
+                            <p className="text-blue-600 dark:text-blue-400 text-xs mt-0.5">
+                              Click to start messaging →
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {filteredConversations.length === 0 && recentConnections.length === 0 ? (
                 <div className="p-6 text-center">
                   <p className="text-slate-500 dark:text-slate-400">
                     No conversations yet. Start messaging experts!
+                  </p>
+                </div>
+              ) : filteredConversations.length === 0 ? (
+                <div className="p-6 text-center">
+                  <p className="text-slate-500 dark:text-slate-400">
+                    No active conversations. Click on a recent connection above to start chatting!
                   </p>
                 </div>
               ) : (
