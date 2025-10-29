@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 import { 
   Clock, 
   AlertTriangle, 
@@ -58,6 +59,7 @@ export default function KnowledgeQuality() {
   const [reviews, setReviews] = useState<PeerReview[]>([]);
   const [versions, setVersions] = useState<Version[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
 
   // Review form state
@@ -149,6 +151,7 @@ export default function KnowledgeQuality() {
   const submitReview = async () => {
     if (!selectedItem || !currentUserId) return;
 
+    setSubmitting(true);
     try {
       const { data: profile } = await supabase
         .from('profiles')
@@ -177,10 +180,12 @@ export default function KnowledgeQuality() {
       setReviewComments('');
       setReviewStatus('approved');
       
-      alert('Review submitted successfully!');
+      toast.success('Review submitted successfully!');
     } catch (error) {
       console.error('Error submitting review:', error);
-      alert('Failed to submit review');
+      toast.error('Failed to submit review. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -361,8 +366,8 @@ export default function KnowledgeQuality() {
                 />
               </div>
 
-              <Button onClick={submitReview} className="w-full">
-                Submit Review
+              <Button onClick={submitReview} className="w-full" disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Submit Review'}
               </Button>
             </div>
           </Card>
