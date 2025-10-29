@@ -128,16 +128,27 @@ export default function KnowledgeQuality() {
   const loadReviews = async (itemId: string) => {
     try {
       const supabase = createClient();
+      console.log('Loading reviews for item:', itemId, 'Type:', typeof itemId);
+      
+      // Try both integer and string comparison
+      const itemIdNum = parseInt(itemId as any);
+      
       const { data, error } = await supabase
         .from('peer_reviews')
         .select('*')
-        .eq('knowledge_item_id', itemId)
+        .eq('knowledge_item_id', itemIdNum)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading reviews:', error);
+        throw error;
+      }
+      
+      console.log('Reviews loaded:', data?.length || 0, 'reviews');
       setReviews(data || []);
     } catch (error) {
       console.error('Error loading reviews:', error);
+      setReviews([]);
     }
   };
 
@@ -198,7 +209,8 @@ export default function KnowledgeQuality() {
 
       console.log('Review inserted successfully:', data);
 
-      // Reload reviews
+      // Reload reviews to show the new one
+      console.log('Reloading reviews for item:', selectedItem.id);
       await loadReviews(selectedItem.id);
       
       // Reset form
@@ -206,7 +218,7 @@ export default function KnowledgeQuality() {
       setReviewComments('');
       setReviewStatus('approved');
       
-      toast.success('Review submitted successfully!');
+      toast.success('✅ Review submitted successfully! Check "Previous Reviews" below.');
     } catch (error: any) {
       console.error('Error submitting review:', error);
       toast.error(error.message || 'Failed to submit review. Please try again.');
@@ -398,18 +410,35 @@ export default function KnowledgeQuality() {
             </div>
           </Card>
 
-          <div className="space-y-3">
-            <h4 className="font-semibold text-slate-900 dark:text-white">Previous Reviews</h4>
+          <div className="space-y-3" id="reviews-section">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-slate-900 dark:text-white">
+                Previous Reviews ({reviews.length})
+              </h4>
+              {reviews.length > 0 && (
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                </span>
+              )}
+            </div>
             {reviews.length === 0 ? (
-              <p className="text-sm text-slate-600 dark:text-slate-400">No reviews yet</p>
+              <Card className="p-6 text-center">
+                <MessageSquare className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  No reviews yet. Be the first to review this content!
+                </p>
+              </Card>
             ) : (
               reviews.map(review => (
-                <Card key={review.id} className="p-4">
+                <Card key={review.id} className="p-4 border-l-4" style={{
+                  borderLeftColor: review.status === 'approved' ? '#10b981' : 
+                                  review.status === 'rejected' ? '#ef4444' : '#f59e0b'
+                }}>
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-slate-900 dark:text-white">{review.reviewer_name}</span>
                       <span className="flex items-center gap-1 text-sm">
-                        <Star className="w-4 h-4 text-yellow-500" />
+                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                         {review.rating}/10
                       </span>
                     </div>
