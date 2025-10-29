@@ -52,7 +52,7 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
         .from('user_connections')
         .select('connected_with')
         .eq('user_id', user.id)
-        .eq('status', 'connected');
+        .in('status', ['connected', 'accepted']);
 
       if (error) {
         console.error("Failed to fetch connections:", error);
@@ -62,6 +62,7 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
       if (data) {
         const connectedIds = new Set(data.map(conn => conn.connected_with));
         setConnectedUserIds(connectedIds);
+        console.log('Connected users:', connectedIds.size, 'connections');
       }
     } catch (error) {
       console.error("Failed to fetch connections:", error);
@@ -74,6 +75,10 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
       const { createClient } = await import("../utils/supabase/client");
       const supabase = createClient();
       
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUserId = user?.id;
+      
       let query = supabase
         .from('profiles')
         .select('*');
@@ -81,6 +86,11 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
       // Filter by department if not "all"
       if (selectedDepartment !== 'all') {
         query = query.eq('department', selectedDepartment);
+      }
+      
+      // Exclude current user
+      if (currentUserId) {
+        query = query.neq('id', currentUserId);
       }
       
       const { data, error } = await query;
@@ -254,8 +264,9 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
   }
 
   const filteredExperts = searchQuery
-    ? experts.filter(
-        (expert) => {
+    ? experts
+        .filter((expert) => !connectedUserIds.has(expert.id)) // Exclude connected users
+        .filter((expert) => {
           const query = searchQuery.toLowerCase();
           const name = expert.name?.toLowerCase() || '';
           const team = expert.team?.toLowerCase() || '';
@@ -285,9 +296,8 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
           console.log('Match result:', matches);
           
           return matches;
-        }
-      )
-    : experts;
+        })
+    : experts.filter((expert) => !connectedUserIds.has(expert.id)); // Exclude connected users
 
   return (
     <>
