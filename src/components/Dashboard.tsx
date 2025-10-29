@@ -269,22 +269,48 @@ export function Dashboard({ accessToken }: DashboardProps) {
       const { data: user } = await supabase.auth.getUser();
       
       if (user?.user?.id) {
-        // Try to get all profiles directly (simpler approach)
-        const { data: allProfiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, full_name, email, avatar_url, role, team, expertise, department, created_at')
-          .neq('id', user.user.id)
-          .order('created_at', { ascending: false })
-          .limit(50);
+        // First, get the list of connected user IDs from user_connections
+        const { data: connectionData, error: connError } = await supabase
+          .from('user_connections')
+          .select('connected_with, created_at')
+          .eq('user_id', user.user.id)
+          .eq('status', 'accepted')
+          .order('created_at', { ascending: false });
         
-        if (!profilesError && allProfiles) {
-          // Map to the expected format
-          const mappedConnections = allProfiles.map(profile => ({
-            ...profile,
-            connection_date: profile.created_at
-          }));
+        if (connError) {
+          console.error('Error loading connections:', connError);
+          setConnections([]);
+          setLoadingDialog(false);
+          return;
+        }
+
+        if (!connectionData || connectionData.length === 0) {
+          setConnections([]);
+          setLoadingDialog(false);
+          return;
+        }
+
+        // Get the connected user IDs
+        const connectedUserIds = connectionData.map(c => c.connected_with);
+        
+        // Now fetch the profiles for these users
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, role, team, expertise, department')
+          .in('id', connectedUserIds);
+        
+        if (!profilesError && profiles) {
+          // Map to the expected format with connection dates
+          const mappedConnections = profiles.map(profile => {
+            const connectionInfo = connectionData.find(c => c.connected_with === profile.id);
+            return {
+              ...profile,
+              connection_date: connectionInfo?.created_at,
+              avatar_url: null // No avatar images, use initials only
+            };
+          });
           setConnections(mappedConnections);
-          console.log('Loaded connections:', mappedConnections.length);
+          console.log('Loaded real connections:', mappedConnections.length);
         } else {
           console.error('Error loading profiles:', profilesError);
           setConnections([]);
@@ -358,7 +384,7 @@ export function Dashboard({ accessToken }: DashboardProps) {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">Team Members</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Active Connections</p>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className="text-slate-900 dark:text-slate-100">{stats.activeConnections.value}</span>
                       {!isNaN(stats.activeConnections.percentage) && (
@@ -685,11 +711,11 @@ export function Dashboard({ accessToken }: DashboardProps) {
       <Dialog open={isConnectionsDialogOpen} onOpenChange={setIsConnectionsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Team Members</DialogTitle>
+            <DialogTitle>Active Connections</DialogTitle>
             <DialogDescription>
               {connections.length === 0 
-                ? "No team members found" 
-                : `${connections.length} ${connections.length === 1 ? 'person' : 'people'} available to connect with`}
+                ? "No connections yet. Start connecting with colleagues!" 
+                : `${connections.length} ${connections.length === 1 ? 'connection' : 'connections'}`}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
@@ -700,7 +726,7 @@ export function Dashboard({ accessToken }: DashboardProps) {
             ) : connections.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-                <p>No team members found. Invite colleagues to join!</p>
+                <p>No connections yet. Start messaging colleagues to connect!</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-1">
@@ -708,7 +734,6 @@ export function Dashboard({ accessToken }: DashboardProps) {
                   <Card key={connection.id} className="p-4">
                     <div className="flex items-start gap-3">
                       <Avatar className="w-12 h-12">
-                        <AvatarImage src={connection.avatar_url} />
                         <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white">
                           {connection.full_name.split(' ').map((n: string) => n[0]).join('')}
                         </AvatarFallback>
