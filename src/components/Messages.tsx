@@ -279,12 +279,29 @@ export function Messages({ currentUserName }: MessagesProps) {
         timestamp: new Date().toISOString(),
         isCurrentUser: true,
       };
-      setMessages((prev) => [...prev, newMsg]);
+      
+      // Add to messages array immediately
+      setMessages((prev) => {
+        // Check if message already exists (avoid duplicates)
+        const exists = prev.some(m => m.content === messageContent && 
+                                     m.timestamp.substring(0, 16) === newMsg.timestamp.substring(0, 16));
+        if (exists) return prev;
+        return [...prev, newMsg];
+      });
 
-      // Refresh messages after a short delay to ensure DB sync
-      setTimeout(() => {
-        fetchMessages(selectedConversation.id);
-      }, 500);
+      // Refresh messages after a delay to sync with database, but don't clear optimistic update
+      setTimeout(async () => {
+        const supabase = createClient();
+        const { data: messagesData } = await supabase.rpc('get_conversation_messages', {
+          p_conversation_id: selectedConversation.id,
+          p_user_id: currentUserId
+        });
+        
+        if (messagesData && Array.isArray(messagesData)) {
+          console.log('Refreshed messages from DB:', messagesData.length);
+          setMessages(messagesData);
+        }
+      }, 800);
 
       toast.success('Message sent!');
     } catch (error) {
