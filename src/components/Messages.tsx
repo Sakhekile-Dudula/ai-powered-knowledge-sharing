@@ -97,10 +97,7 @@ export function Messages({ currentUserName }: MessagesProps) {
       
       if (!user) return;
 
-      // Get connections from the last 7 days
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
+      // Get ALL connections (no time limit) - showing only unmessaged ones
       const { data: connections, error } = await supabase
         .from('user_connections')
         .select(`
@@ -116,7 +113,6 @@ export function Messages({ currentUserName }: MessagesProps) {
         `)
         .eq('user_id', user.id)
         .in('status', ['connected', 'accepted'])
-        .gte('created_at', sevenDaysAgo.toISOString())
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -626,7 +622,7 @@ export function Messages({ currentUserName }: MessagesProps) {
               {recentConnections.length > 0 && (
                 <div className="p-3 border-b dark:border-slate-700">
                   <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 px-1">
-                    RECENTLY CONNECTED
+                    CONNECTED - NOT YET MESSAGED
                   </h3>
                   <div className="space-y-1">
                     {recentConnections.map((connection) => (
