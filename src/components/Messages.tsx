@@ -75,7 +75,6 @@ export function Messages({ currentUserName }: MessagesProps) {
     };
     initializeUser();
     fetchConversations();
-    fetchRecentConnections();
   }, []);
 
   useEffect(() => {
@@ -84,6 +83,13 @@ export function Messages({ currentUserName }: MessagesProps) {
     }
   }, [selectedConversation, currentUserId]);
 
+  // Fetch recent connections after conversations are loaded
+  useEffect(() => {
+    if (!isLoading && currentUserId) {
+      fetchRecentConnections();
+    }
+  }, [isLoading, conversations.length, currentUserId]);
+
   const fetchRecentConnections = async () => {
     try {
       const supabase = createClient();
@@ -91,7 +97,7 @@ export function Messages({ currentUserName }: MessagesProps) {
       
       if (!user) return;
 
-      // Get connections from the last 7 days that don't have conversations yet
+      // Get connections from the last 7 days
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -119,15 +125,35 @@ export function Messages({ currentUserName }: MessagesProps) {
       }
 
       if (connections) {
-        // Filter out connections that already have conversations
-        const conversationParticipantIds = new Set(
-          conversations.map(conv => conv.participantEmail)
-        );
+        // Get IDs of users we already have conversations with
+        const conversationUserIds = new Set<string>();
+        
+        // Query conversation_participants to find all users we have conversations with
+        const { data: myConversations } = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .eq('user_id', user.id);
+          
+        if (myConversations && myConversations.length > 0) {
+          const conversationIds = myConversations.map(c => c.conversation_id);
+          
+          // Get all other participants in these conversations
+          const { data: otherParticipants } = await supabase
+            .from('conversation_participants')
+            .select('user_id')
+            .in('conversation_id', conversationIds)
+            .neq('user_id', user.id);
+            
+          if (otherParticipants) {
+            otherParticipants.forEach(p => conversationUserIds.add(p.user_id));
+          }
+        }
 
+        // Filter out connections that already have conversations
         const unmessagedConnections = connections
           .filter(conn => {
             const profile = conn.profiles as any;
-            return profile && !conversationParticipantIds.has(profile.email);
+            return profile && !conversationUserIds.has(profile.id);
           })
           .map(conn => {
             const profile = conn.profiles as any;
@@ -141,6 +167,9 @@ export function Messages({ currentUserName }: MessagesProps) {
             };
           });
 
+        console.log('Total connections:', connections.length);
+        console.log('Users with conversations:', conversationUserIds.size);
+        console.log('Recent connections (unmessaged):', unmessagedConnections.length);
         setRecentConnections(unmessagedConnections);
       }
     } catch (error) {
@@ -234,6 +263,7 @@ export function Messages({ currentUserName }: MessagesProps) {
       }
 
       // Send initial message to create conversation
+      console.log('Creating conversation with:', connection.name, 'ID:', connection.id);
       const firstMessage = "Hi! Let's connect and collaborate.";
       const { error } = await supabase.rpc('send_message', {
         p_sender_id: currentUserId,
@@ -243,19 +273,20 @@ export function Messages({ currentUserName }: MessagesProps) {
 
       if (error) {
         console.error('Error creating conversation:', error);
-        toast.error('Failed to start conversation');
+        toast.error(`Failed to start conversation: ${error.message}`);
         return;
       }
 
+      console.log('Conversation created successfully!');
       toast.success(`Started conversation with ${connection.name}!`);
       
       // Refresh conversations and recent connections
       await fetchConversations();
       await fetchRecentConnections();
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting conversation:', error);
-      toast.error('Failed to start conversation');
+      toast.error(`Failed to start conversation: ${error?.message || 'Unknown error'}`);
     }
   };
 
