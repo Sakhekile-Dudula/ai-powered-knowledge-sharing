@@ -149,7 +149,11 @@ export default function KnowledgeQuality() {
   };
 
   const submitReview = async () => {
-    if (!selectedItem || !currentUserId) return;
+    if (!selectedItem || !currentUserId) {
+      console.log('Missing selectedItem or currentUserId:', { selectedItem, currentUserId });
+      toast.error('Please select an item and ensure you are logged in');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -159,18 +163,30 @@ export default function KnowledgeQuality() {
         .eq('id', currentUserId)
         .single();
 
-      const { error } = await supabase
-        .from('peer_reviews')
-        .insert({
-          knowledge_item_id: selectedItem.id,
-          reviewer_id: currentUserId,
-          reviewer_name: profile?.full_name || 'Anonymous',
-          status: reviewStatus,
-          rating: reviewRating,
-          comments: reviewComments
-        });
+      console.log('Submitting review for item:', selectedItem.id, 'Type:', typeof selectedItem.id);
 
-      if (error) throw error;
+      const reviewData = {
+        knowledge_item_id: parseInt(selectedItem.id as any) || selectedItem.id,
+        reviewer_id: currentUserId,
+        reviewer_name: profile?.full_name || 'Anonymous',
+        status: reviewStatus,
+        rating: reviewRating,
+        comments: reviewComments
+      };
+
+      console.log('Review data:', reviewData);
+
+      const { data, error } = await supabase
+        .from('peer_reviews')
+        .insert(reviewData)
+        .select();
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      console.log('Review inserted successfully:', data);
 
       // Reload reviews
       await loadReviews(selectedItem.id);
@@ -181,9 +197,9 @@ export default function KnowledgeQuality() {
       setReviewStatus('approved');
       
       toast.success('Review submitted successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting review:', error);
-      toast.error('Failed to submit review. Please try again.');
+      toast.error(error.message || 'Failed to submit review. Please try again.');
     } finally {
       setSubmitting(false);
     }
