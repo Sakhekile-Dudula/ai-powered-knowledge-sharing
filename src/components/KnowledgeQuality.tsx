@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { supabase } from '../lib/supabase';
+import { createClient } from '../utils/supabase/client';
 import { toast } from 'sonner';
 import { 
   Clock, 
@@ -80,13 +80,20 @@ export default function KnowledgeQuality() {
   }, [selectedItem]);
 
   const loadCurrentUser = async () => {
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) setCurrentUserId(user.id);
+    if (user) {
+      setCurrentUserId(user.id);
+      console.log('Current user loaded:', user.id);
+    } else {
+      console.log('No user found');
+    }
   };
 
   const loadKnowledgeItems = async () => {
     setLoading(true);
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from('knowledge_items')
         .select(`
@@ -120,6 +127,7 @@ export default function KnowledgeQuality() {
 
   const loadReviews = async (itemId: string) => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from('peer_reviews')
         .select('*')
@@ -135,6 +143,7 @@ export default function KnowledgeQuality() {
 
   const loadVersions = async (itemId: string) => {
     try {
+      const supabase = createClient();
       const { data, error } = await supabase
         .from('knowledge_versions')
         .select('*')
@@ -157,6 +166,7 @@ export default function KnowledgeQuality() {
 
     setSubmitting(true);
     try {
+      const supabase = createClient();
       const { data: profile } = await supabase
         .from('profiles')
         .select('full_name')
