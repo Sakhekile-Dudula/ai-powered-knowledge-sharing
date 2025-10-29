@@ -30,11 +30,7 @@ BEGIN
         INNER JOIN conversation_participants cp ON c.id = cp.conversation_id AND cp.user_id = p_user_id
         INNER JOIN conversation_participants other_cp ON c.id = other_cp.conversation_id AND other_cp.user_id != p_user_id
         INNER JOIN profiles other_user ON other_cp.user_id = other_user.id
-        -- Only show conversations with connected users
-        INNER JOIN user_connections uc ON (
-            (uc.user_id = p_user_id AND uc.connected_with = other_user.id)
-            OR (uc.connected_with = p_user_id AND uc.user_id = other_user.id)
-        ) AND uc.status IN ('connected', 'accepted')
+        -- REMOVED: Connection requirement - show ALL conversations with messages
         LEFT JOIN LATERAL (
             SELECT content, created_at
             FROM messages
@@ -42,6 +38,7 @@ BEGIN
             ORDER BY created_at DESC
             LIMIT 1
         ) last_msg ON true
+        WHERE last_msg.content IS NOT NULL  -- Only show conversations with at least one message
         ORDER BY other_user.id, last_msg.created_at DESC NULLS LAST
     )
     SELECT json_agg(
