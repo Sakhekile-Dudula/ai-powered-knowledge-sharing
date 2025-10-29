@@ -30,7 +30,11 @@ BEGIN
         INNER JOIN conversation_participants cp ON c.id = cp.conversation_id AND cp.user_id = p_user_id
         INNER JOIN conversation_participants other_cp ON c.id = other_cp.conversation_id AND other_cp.user_id != p_user_id
         INNER JOIN profiles other_user ON other_cp.user_id = other_user.id
-        -- REMOVED: Connection requirement - show ALL conversations with messages
+        -- Show conversations with connected users (bidirectional check)
+        INNER JOIN user_connections uc ON (
+            (uc.user_id = p_user_id AND uc.connected_with = other_user.id)
+            OR (uc.connected_with = p_user_id AND uc.user_id = other_user.id)
+        ) AND uc.status IN ('connected', 'accepted')
         LEFT JOIN LATERAL (
             SELECT content, created_at
             FROM messages

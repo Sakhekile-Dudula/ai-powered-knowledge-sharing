@@ -180,35 +180,54 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error("You must be logged in to connect");
+        setConnectingIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(expertId);
+          return newSet;
+        });
         return;
       }
 
-      // Create bidirectional connection
+      // Create bidirectional connection using UPSERT
       const { error: error1 } = await supabase
         .from('user_connections')
-        .insert({
+        .upsert({
           user_id: user.id,
           connected_with: expertId,
-          status: 'connected'
+          status: 'connected',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,connected_with'
         });
 
       const { error: error2 } = await supabase
         .from('user_connections')
-        .insert({
+        .upsert({
           user_id: expertId,
           connected_with: user.id,
-          status: 'connected'
+          status: 'connected',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,connected_with'
         });
 
       if (error1 || error2) {
         console.error("Failed to create connection:", error1 || error2);
-        toast.error("Failed to connect. You may already be connected.");
+        toast.error("Failed to connect. Please try again.");
+        setConnectingIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(expertId);
+          return newSet;
+        });
         return;
       }
 
       // Update local state
       setConnectedUserIds(prev => new Set(prev).add(expertId));
       toast.success(`Successfully connected with ${expertName}!`);
+      
+      // Refresh connections to ensure UI is in sync
+      await fetchConnections();
     } catch (error) {
       console.error("Failed to create connection:", error);
       toast.error("Failed to connect. Please try again.");
