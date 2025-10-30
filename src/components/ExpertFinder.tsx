@@ -23,6 +23,8 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
   const [isLoading, setIsLoading] = useState(true);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [selectedExpert, setSelectedExpert] = useState<string>("");
+  const [selectedExpertId, setSelectedExpertId] = useState<string>("");
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [connectedUserIds, setConnectedUserIds] = useState<Set<string>>(new Set());
   const [connectingIds, setConnectingIds] = useState<Set<string>>(new Set());
@@ -36,9 +38,23 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
   const [bookingNotes, setBookingNotes] = useState("");
 
   useEffect(() => {
+    initUser();
     fetchExperts();
     fetchConnections();
   }, [selectedDepartment]);
+
+  const initUser = async () => {
+    try {
+      const { createClient } = await import("../utils/supabase/client");
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    } catch (error) {
+      console.error("Failed to get user:", error);
+    }
+  };
 
   const fetchConnections = async () => {
     try {
@@ -160,8 +176,9 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
     }
   };
 
-  const handleMessage = (expertName: string) => {
+  const handleMessage = (expertName: string, expertId: string) => {
     setSelectedExpert(expertName);
+    setSelectedExpertId(expertId);
     setIsMessagingOpen(true);
   };
 
@@ -324,7 +341,9 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
         isOpen={isMessagingOpen}
         onClose={() => setIsMessagingOpen(false)}
         recipientName={selectedExpert}
+        recipientId={selectedExpertId}
         currentUserName={currentUserName}
+        currentUserId={currentUserId}
         accessToken={accessToken}
       />
       
@@ -610,7 +629,7 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
                         )}
                       </Button>
                     )}
-                    <Button size="sm" onClick={() => handleMessage(expert.name)}>
+                    <Button size="sm" onClick={() => handleMessage(expert.name, expert.id)}>
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Message
                     </Button>

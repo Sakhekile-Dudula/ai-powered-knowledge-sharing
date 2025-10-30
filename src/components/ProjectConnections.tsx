@@ -7,15 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
-import { API_ENDPOINTS, getApiEndpoint } from "../utils/supabase/api-config";
 import { ProjectGraph } from "./ProjectGraph";
 import { toast } from "sonner";
 
 interface ProjectConnectionsProps {
-  accessToken: string | null;
+  accessToken?: string | null;
 }
 
-export function ProjectConnections({ accessToken }: ProjectConnectionsProps) {
+export function ProjectConnections({}: ProjectConnectionsProps) {
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -38,19 +37,43 @@ export function ProjectConnections({ accessToken }: ProjectConnectionsProps) {
   const fetchProjects = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        getApiEndpoint(API_ENDPOINTS.PROJECTS_LIST),
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
+      const { createClient } = await import("../utils/supabase/client");
+      const supabase = createClient();
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          profiles:created_by(full_name, avatar_url, department)
+        `)
+        .order('created_at', { ascending: false });
 
-      if (response.ok) {
-        const data = await response.json();
-        setProjects(data.projects);
+      if (error) {
+        console.error("Failed to fetch projects:", error);
+        toast.error("Failed to load projects");
+        return;
+      }
+
+      if (data) {
+        // Transform data to match expected format
+        const transformedProjects = data.map(project => ({
+          id: project.id,
+          name: project.name,
+          description: project.description,
+          team: project.profiles?.department || 'Unknown',
+          timeline: project.created_at ? new Date(project.created_at).toLocaleDateString() : '',
+          tags: project.tags || [],
+          status: project.status || 'active',
+          progress: 50, // Default progress
+          members: 1,
+          connectedProjects: [],
+          created_by: project.profiles?.full_name || 'Unknown'
+        }));
+        setProjects(transformedProjects);
       }
     } catch (error) {
       console.error("Failed to fetch projects:", error);
+      toast.error("Failed to load projects");
     } finally {
       setIsLoading(false);
     }
@@ -72,39 +95,43 @@ export function ProjectConnections({ accessToken }: ProjectConnectionsProps) {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(
-        getApiEndpoint(API_ENDPOINTS.PROJECTS_CREATE),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            name: newName,
-            description: newDescription,
-            team: newTeam,
-            timeline: newTimeline,
-            tags: newTags.split(",").map(t => t.trim()).filter(Boolean),
-            status: "In Progress",
-            progress: 0,
-            members: 1,
-            connectedProjects: [],
-          }),
-        }
-      );
+      const { createClient } = await import("../utils/supabase/client");
+      const supabase = createClient();
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to create a project");
+        setIsSubmitting(false);
+        return;
+      }
 
-      if (response.ok) {
+      const { error } = await supabase
+        .from('projects')
+        .insert([{
+          name: newName,
+          description: newDescription,
+          tags: newTags.split(",").map(t => t.trim()).filter(Boolean),
+          status: 'active',
+          created_by: user.id
+        }]);
+
+      if (error) {
+        console.error("Failed to add project:", error);
+        toast.error("Failed to create project");
+      } else {
+        toast.success("Project created successfully!");
         setIsDialogOpen(false);
         setNewName("");
         setNewDescription("");
         setNewTeam("");
         setNewTimeline("");
         setNewTags("");
-        fetchProjects();
+        await fetchProjects();
       }
     } catch (error) {
       console.error("Failed to add project:", error);
+      toast.error("An error occurred");
     } finally {
       setIsSubmitting(false);
     }
