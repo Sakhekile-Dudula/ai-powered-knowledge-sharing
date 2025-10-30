@@ -132,7 +132,9 @@ BEGIN
 END;
 $$;
 
--- Trigger for message sending
+-- Message tracking function (for future use when conversation_messages table exists)
+-- Uncomment this when you have the messaging tables set up
+/*
 CREATE OR REPLACE FUNCTION track_message_activity()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -168,15 +170,15 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+*/
 
 -- Drop existing triggers if they exist
 DROP TRIGGER IF EXISTS trigger_track_knowledge_items ON knowledge_items;
 DROP TRIGGER IF EXISTS trigger_track_questions ON questions;
 DROP TRIGGER IF EXISTS trigger_track_answers ON answers;
 DROP TRIGGER IF EXISTS trigger_track_connections ON user_connections;
-DROP TRIGGER IF EXISTS trigger_track_messages ON conversation_messages;
 
--- Create triggers
+-- Create triggers (only for tables that exist)
 CREATE TRIGGER trigger_track_knowledge_items
   AFTER INSERT OR UPDATE ON knowledge_items
   FOR EACH ROW
@@ -197,10 +199,11 @@ CREATE TRIGGER trigger_track_connections
   FOR EACH ROW
   EXECUTE FUNCTION track_connection_activity();
 
-CREATE TRIGGER trigger_track_messages
-  AFTER INSERT ON conversation_messages
-  FOR EACH ROW
-  EXECUTE FUNCTION track_message_activity();
+-- Note: Message tracking commented out - uncomment when messaging tables are ready
+-- CREATE TRIGGER trigger_track_messages
+--   AFTER INSERT ON conversation_messages
+--   FOR EACH ROW
+--   EXECUTE FUNCTION track_message_activity();
 
 -- Grant execute permissions
 GRANT EXECUTE ON FUNCTION log_activity TO authenticated;
@@ -208,7 +211,6 @@ GRANT EXECUTE ON FUNCTION track_knowledge_item_activity TO authenticated;
 GRANT EXECUTE ON FUNCTION track_question_activity TO authenticated;
 GRANT EXECUTE ON FUNCTION track_answer_activity TO authenticated;
 GRANT EXECUTE ON FUNCTION track_connection_activity TO authenticated;
-GRANT EXECUTE ON FUNCTION track_message_activity TO authenticated;
 
 -- Update RLS policies for activity_log
 ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
@@ -234,4 +236,3 @@ COMMENT ON FUNCTION track_knowledge_item_activity IS 'Auto-track knowledge item 
 COMMENT ON FUNCTION track_question_activity IS 'Auto-track question activities';
 COMMENT ON FUNCTION track_answer_activity IS 'Auto-track answer activities';
 COMMENT ON FUNCTION track_connection_activity IS 'Auto-track connection activities';
-COMMENT ON FUNCTION track_message_activity IS 'Auto-track messaging activities';
