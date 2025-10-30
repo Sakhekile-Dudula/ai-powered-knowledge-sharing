@@ -97,31 +97,47 @@ export function QASystem({ userId }: QASystemProps) {
     }
 
     try {
+      // Get authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        toast.error('You must be logged in to ask a question');
+        console.error('Auth error:', authError);
+        return;
+      }
+
       const tags = questionTags
         .split(',')
         .map(t => t.trim())
         .filter(t => t.length > 0);
 
-      const { error } = await supabase
+      console.log('Posting question with user:', user.id);
+
+      const { data, error } = await supabase
         .from('questions')
         .insert({
-          author_id: userId,
-          title: questionTitle,
-          description: questionDescription,
+          author_id: user.id,
+          title: questionTitle.trim(),
+          description: questionDescription.trim(),
           tags: tags
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
+      console.log('Question posted successfully:', data);
       toast.success('Question posted successfully!');
       setQuestionTitle('');
       setQuestionDescription('');
       setQuestionTags('');
       setIsAskDialogOpen(false);
       fetchQuestions();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error posting question:', error);
-      toast.error('Failed to post question');
+      toast.error(`Failed to post question: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -153,27 +169,49 @@ export function QASystem({ userId }: QASystemProps) {
     }
 
     try {
-      const { error } = await supabase
+      // Get authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        toast.error('You must be logged in to post an answer');
+        console.error('Auth error:', authError);
+        return;
+      }
+
+      console.log('Posting answer for question:', selectedQuestion.id);
+      console.log('User ID:', user.id);
+      console.log('Answer content:', answerContent.substring(0, 50) + '...');
+
+      const { data, error } = await supabase
         .from('answers')
         .insert({
           question_id: selectedQuestion.id,
-          author_id: userId,
-          content: answerContent
-        });
+          author_id: user.id,
+          content: answerContent.trim()
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
+      console.log('Answer posted successfully:', data);
       toast.success('Answer posted successfully!');
       setAnswerContent('');
       
       // Refresh answers
-      const { data } = await supabase.rpc('get_answers_for_question', {
+      const { data: answersData } = await supabase.rpc('get_answers_for_question', {
         p_question_id: selectedQuestion.id
       });
-      if (data) setAnswers(data);
-    } catch (error) {
+      if (answersData) setAnswers(answersData);
+      
+      // Also refresh questions to update answer count
+      await fetchQuestions();
+      
+    } catch (error: any) {
       console.error('Error posting answer:', error);
-      toast.error('Failed to post answer');
+      toast.error(`Failed to post answer: ${error.message || 'Unknown error'}`);
     }
   };
 
