@@ -57,21 +57,43 @@ export function SmartConnectionsWidget({ userId, compact = false }: SmartConnect
   };
 
   const handleConnect = async (suggestion: ConnectionSuggestion) => {
+    console.log('🔗 Dashboard Connect button clicked for:', suggestion.targetName, suggestion.targetUserId);
     setConnectingIds(new Set(connectingIds).add(suggestion.targetUserId));
     
     try {
       const supabase = createClient();
       
-      // Send connection request
-      const { error } = await supabase
+      console.log('👤 Connecting:', userId, '->', suggestion.targetUserId);
+      
+      // Create bidirectional connection immediately (not pending)
+      const { error: error1 } = await supabase
         .from('user_connections')
         .insert({
           user_id: userId,
           connected_with: suggestion.targetUserId,
-          status: 'pending',
+          status: 'connected',
         });
 
-      if (error) throw error;
+      if (error1) {
+        console.error('❌ Error creating connection 1:', error1);
+        throw error1;
+      }
+      console.log('✅ Connection 1 created');
+
+      // Create reverse connection
+      const { error: error2 } = await supabase
+        .from('user_connections')
+        .insert({
+          user_id: suggestion.targetUserId,
+          connected_with: userId,
+          status: 'connected',
+        });
+
+      if (error2) {
+        console.error('❌ Error creating connection 2:', error2);
+        throw error2;
+      }
+      console.log('✅ Connection 2 created');
 
       // Update suggestion as accepted
       await supabase
@@ -80,13 +102,13 @@ export function SmartConnectionsWidget({ userId, compact = false }: SmartConnect
         .eq('user_id', userId)
         .eq('suggested_user_id', suggestion.targetUserId);
 
-      toast.success(`Connection request sent to ${suggestion.targetName}`);
+      toast.success(`Successfully connected with ${suggestion.targetName}!`);
       
       // Remove from list
       setSuggestions(suggestions.filter(s => s.targetUserId !== suggestion.targetUserId));
     } catch (error) {
-      console.error('Error sending connection request:', error);
-      toast.error('Failed to send connection request');
+      console.error('❌ Error in handleConnect:', error);
+      toast.error('Failed to connect. Please try again.');
     } finally {
       const newSet = new Set(connectingIds);
       newSet.delete(suggestion.targetUserId);
