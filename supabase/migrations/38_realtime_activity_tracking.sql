@@ -14,8 +14,8 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-  INSERT INTO activity_log (user_id, action, topic, entity_type, entity_id, type, created_at)
-  VALUES (p_user_id, p_action, p_topic, p_entity_type, p_entity_id, 'activity', NOW());
+  INSERT INTO activity_log (user_id, action_type, entity_type, entity_id)
+  VALUES (p_user_id, p_action || ': ' || p_topic, p_entity_type, p_entity_id);
 END;
 $$;
 
@@ -27,24 +27,20 @@ SECURITY DEFINER
 AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    INSERT INTO activity_log (user_id, action, topic, entity_type, entity_id, type)
+    INSERT INTO activity_log (user_id, action_type, entity_type, entity_id)
     VALUES (
       NEW.author_id,
-      'shared',
-      NEW.title,
+      'shared: ' || NEW.title,
       'knowledge_item',
-      NEW.id,
-      'activity'
+      NEW.id
     );
   ELSIF TG_OP = 'UPDATE' AND OLD.title != NEW.title THEN
-    INSERT INTO activity_log (user_id, action, topic, entity_type, entity_id, type)
+    INSERT INTO activity_log (user_id, action_type, entity_type, entity_id)
     VALUES (
       NEW.author_id,
-      'updated',
-      NEW.title,
+      'updated: ' || NEW.title,
       'knowledge_item',
-      NEW.id,
-      'activity'
+      NEW.id
     );
   END IF;
   RETURN NEW;
@@ -59,14 +55,12 @@ SECURITY DEFINER
 AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    INSERT INTO activity_log (user_id, action, topic, entity_type, entity_id, type)
+    INSERT INTO activity_log (user_id, action_type, entity_type, entity_id)
     VALUES (
       NEW.author_id,
-      'asked',
-      NEW.title,
+      'asked: ' || NEW.title,
       'question',
-      NEW.id,
-      'activity'
+      NEW.id
     );
   END IF;
   RETURN NEW;
@@ -89,14 +83,12 @@ BEGIN
     FROM questions
     WHERE id = NEW.question_id;
     
-    INSERT INTO activity_log (user_id, action, topic, entity_type, entity_id, type)
+    INSERT INTO activity_log (user_id, action_type, entity_type, entity_id)
     VALUES (
       NEW.author_id,
-      'answered',
-      question_title,
+      'answered: ' || question_title,
       'answer',
-      NEW.id,
-      'activity'
+      NEW.id
     );
   END IF;
   RETURN NEW;
@@ -118,14 +110,11 @@ BEGIN
     FROM profiles
     WHERE id = NEW.connected_with;
     
-    INSERT INTO activity_log (user_id, action, topic, entity_type, entity_id, type)
+    INSERT INTO activity_log (user_id, action_type, entity_type)
     VALUES (
       NEW.user_id,
-      'connected with',
-      connected_user_name,
-      'connection',
-      NULL,
-      'activity'
+      'connected with: ' || connected_user_name,
+      'connection'
     );
   END IF;
   RETURN NEW;

@@ -1,49 +1,44 @@
 -- Fix activity_log table structure
--- Add missing columns if they don't exist
+-- The actual table has: id, user_id, action_type, entity_type, entity_id, metadata, created_at
+-- No need to add action, topic, or type columns - they don't exist in the real schema
 
--- Add action column if missing
+-- Ensure action_type exists (should already exist as NOT NULL)
 DO $$ 
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'activity_log' AND column_name = 'action'
+        WHERE table_name = 'activity_log' AND column_name = 'action_type'
     ) THEN
-        ALTER TABLE activity_log ADD COLUMN action text;
+        ALTER TABLE activity_log ADD COLUMN action_type TEXT NOT NULL DEFAULT 'unknown';
     END IF;
 END $$;
 
--- Add topic column if missing
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'activity_log' AND column_name = 'topic'
-    ) THEN
-        ALTER TABLE activity_log ADD COLUMN topic text;
-    END IF;
-END $$;
-
--- Add entity_type column if missing
+-- Ensure entity_type exists (should already exist)
 DO $$ 
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'activity_log' AND column_name = 'entity_type'
     ) THEN
-        ALTER TABLE activity_log ADD COLUMN entity_type text;
+        ALTER TABLE activity_log ADD COLUMN entity_type TEXT;
     END IF;
 END $$;
 
--- Add entity_id column if missing (or fix type if wrong)
+-- Fix entity_id type from uuid to bigint (to match answers.id, questions.id, etc.)
 DO $$ 
+DECLARE
+    current_type TEXT;
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'activity_log' AND column_name = 'entity_id'
-    ) THEN
+    -- Get current type
+    SELECT data_type INTO current_type
+    FROM information_schema.columns 
+    WHERE table_name = 'activity_log' AND column_name = 'entity_id';
+    
+    IF current_type IS NULL THEN
+        -- Column doesn't exist, add it
         ALTER TABLE activity_log ADD COLUMN entity_id bigint;
-    ELSE
-        -- Fix type to bigint (handles integer, uuid, or other types)
+    ELSIF current_type != 'bigint' THEN
+        -- Column exists but wrong type, convert it
         BEGIN
             ALTER TABLE activity_log ALTER COLUMN entity_id TYPE bigint USING 
                 CASE 
@@ -56,17 +51,6 @@ BEGIN
                 ALTER TABLE activity_log DROP COLUMN entity_id;
                 ALTER TABLE activity_log ADD COLUMN entity_id bigint;
         END;
-    END IF;
-END $$;
-
--- Add type column if missing
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'activity_log' AND column_name = 'type'
-    ) THEN
-        ALTER TABLE activity_log ADD COLUMN type text DEFAULT 'activity';
     END IF;
 END $$;
 
@@ -92,10 +76,11 @@ BEGIN
     END IF;
 END $$;
 
--- Create indexes for better performance
+-- Create indexes for better performance (if they don't exist)
 CREATE INDEX IF NOT EXISTS idx_activity_log_user_id ON activity_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log(type);
+CREATE INDEX IF NOT EXISTS idx_activity_log_action_type ON activity_log(action_type);
+CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id);
 
 -- Verify the table structure
 SELECT 
