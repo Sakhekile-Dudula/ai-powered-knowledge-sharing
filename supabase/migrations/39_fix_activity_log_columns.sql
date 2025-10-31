@@ -41,14 +41,21 @@ BEGIN
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'activity_log' AND column_name = 'entity_id'
     ) THEN
-        ALTER TABLE activity_log ADD COLUMN entity_id uuid;
+        ALTER TABLE activity_log ADD COLUMN entity_id bigint;
     ELSE
-        -- Fix type if it's integer instead of uuid
-        ALTER TABLE activity_log ALTER COLUMN entity_id TYPE uuid USING 
-            CASE 
-                WHEN entity_id::text ~ '^[0-9]+$' THEN NULL
-                ELSE entity_id::text::uuid 
-            END;
+        -- Fix type to bigint (handles integer, uuid, or other types)
+        BEGIN
+            ALTER TABLE activity_log ALTER COLUMN entity_id TYPE bigint USING 
+                CASE 
+                    WHEN entity_id::text ~ '^[0-9]+$' THEN entity_id::text::bigint
+                    ELSE NULL
+                END;
+        EXCEPTION
+            WHEN OTHERS THEN
+                -- If conversion fails, drop and recreate
+                ALTER TABLE activity_log DROP COLUMN entity_id;
+                ALTER TABLE activity_log ADD COLUMN entity_id bigint;
+        END;
     END IF;
 END $$;
 

@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION log_activity(
   p_action text,
   p_topic text,
   p_entity_type text DEFAULT NULL,
-  p_entity_id uuid DEFAULT NULL
+  p_entity_id bigint DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
