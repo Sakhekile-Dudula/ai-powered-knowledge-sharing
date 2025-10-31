@@ -80,7 +80,6 @@ export function SmartConnectionsWidget({ userId, compact = false }: SmartConnect
 
   const handleConnect = async (suggestion: ConnectionSuggestion) => {
     console.log('🔗 Dashboard Connect button clicked for:', suggestion.targetName, suggestion.targetUserId);
-    alert(`Connect button clicked! Check console for details.`);
     setConnectingIds(new Set(connectingIds).add(suggestion.targetUserId));
     
     try {
