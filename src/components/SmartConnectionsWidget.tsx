@@ -9,7 +9,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Sparkles, UserPlus, X, TrendingUp, Loader2, RefreshCw } from 'lucide-react';
-import { getProactiveAI, ConnectionSuggestion } from '../utils/proactiveAI';
+import { ConnectionSuggestion } from '../utils/proactiveAI';
 import { createClient } from '../utils/supabase/client';
 import { toast } from 'sonner';
 
@@ -31,26 +31,48 @@ export function SmartConnectionsWidget({ userId, compact = false }: SmartConnect
   const loadSuggestions = async () => {
     setLoading(true);
     try {
-      const aiService = getProactiveAI();
+      const supabase = createClient();
       
-      // First try to get stored suggestions
-      const stored = await aiService.getStoredSuggestions(userId);
-      
-      if (stored.length > 0) {
-        setSuggestions(stored.filter(s => !dismissedIds.has(s.targetUserId)));
-      } else {
-        // Generate new suggestions if none exist
-        const generated = await aiService.generateConnectionSuggestions(userId);
-        setSuggestions(generated);
+      // Simple approach: Get other users you're not connected with yet
+      const { data: existingConnections } = await supabase
+        .from('user_connections')
+        .select('connected_with')
+        .eq('user_id', userId);
+
+      const connectedIds = existingConnections?.map(c => c.connected_with) || [];
+      connectedIds.push(userId); // Don't suggest yourself
+
+      // Get random users excluding connected ones
+      const { data: users, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, avatar_url, department, expertise, role')
+        .not('id', 'in', `(${connectedIds.join(',')})`)
+        .limit(5);
+
+      if (error) throw error;
+
+      if (users && users.length > 0) {
+        const suggestions: ConnectionSuggestion[] = users.map(user => ({
+          userId: userId,
+          targetUserId: user.id,
+          targetName: user.full_name,
+          targetEmail: user.email,
+          targetAvatar: user.avatar_url,
+          targetDepartment: user.department,
+          reason: `${user.role || 'Team member'} with expertise in ${(user.expertise || []).slice(0, 2).join(', ')}`,
+          score: 75,
+          sharedInterests: user.expertise || [],
+          suggestedBy: 'skill_match' as const,
+          confidence: 75
+        }));
         
-        // Store them for future
-        for (const suggestion of generated) {
-          await aiService.storeConnectionSuggestion(suggestion);
-        }
+        setSuggestions(suggestions);
+      } else {
+        setSuggestions([]);
       }
     } catch (error) {
       console.error('Error loading suggestions:', error);
-      toast.error('Failed to load connection suggestions');
+      setSuggestions([]); // Show empty state instead of error
     } finally {
       setLoading(false);
     }
