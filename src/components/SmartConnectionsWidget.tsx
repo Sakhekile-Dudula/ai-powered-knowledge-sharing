@@ -252,7 +252,7 @@ export function SmartConnectionsWidget({ userId, compact = false }: SmartConnect
           {suggestions.slice(0, 3).map((suggestion) => (
             <div key={suggestion.targetUserId} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg">
               <Avatar className="w-10 h-10">
-                <AvatarImage src={suggestion.targetAvatar} />
+                {suggestion.targetAvatar && <AvatarImage src={suggestion.targetAvatar} />}
                 <AvatarFallback className="bg-purple-100 text-purple-700">
                   {getInitials(suggestion.targetName)}
                 </AvatarFallback>
@@ -313,7 +313,7 @@ export function SmartConnectionsWidget({ userId, compact = false }: SmartConnect
               <div className="flex items-start justify-between">
                 <div className="flex gap-3">
                   <Avatar className="w-12 h-12">
-                    <AvatarImage src={suggestion.targetAvatar} />
+                    {suggestion.targetAvatar && <AvatarImage src={suggestion.targetAvatar} />}
                     <AvatarFallback className="bg-purple-100 text-purple-700">
                       {getInitials(suggestion.targetName)}
                     </AvatarFallback>
