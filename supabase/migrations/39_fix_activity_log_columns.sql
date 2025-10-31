@@ -34,14 +34,21 @@ BEGIN
     END IF;
 END $$;
 
--- Add entity_id column if missing
+-- Add entity_id column if missing (or fix type if wrong)
 DO $$ 
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'activity_log' AND column_name = 'entity_id'
     ) THEN
-        ALTER TABLE activity_log ADD COLUMN entity_id integer;
+        ALTER TABLE activity_log ADD COLUMN entity_id uuid;
+    ELSE
+        -- Fix type if it's integer instead of uuid
+        ALTER TABLE activity_log ALTER COLUMN entity_id TYPE uuid USING 
+            CASE 
+                WHEN entity_id::text ~ '^[0-9]+$' THEN NULL
+                ELSE entity_id::text::uuid 
+            END;
     END IF;
 END $$;
 
