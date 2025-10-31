@@ -57,7 +57,7 @@ export function SmartConnectionsWidget({ userId, compact = false }: SmartConnect
           targetUserId: user.id,
           targetName: user.full_name,
           targetEmail: user.email,
-          targetAvatar: user.avatar_url,
+          targetAvatar: user.avatar_url || undefined, // Use undefined instead of null for proper fallback
           targetDepartment: user.department,
           reason: `${user.role || 'Team member'} with expertise in ${(user.expertise || []).slice(0, 2).join(', ')}`,
           score: 75,
