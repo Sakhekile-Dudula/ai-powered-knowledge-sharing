@@ -1,6 +1,6 @@
 /**
- * Proactive AI - Background analysis of work patterns to auto-suggest connections
- * Analyzes user activities, projects, knowledge items to find collaboration opportunities
+ * Proactive AI - Real AI-powered analysis of work patterns and project insights
+ * Uses project_activity_log, user_work_patterns, and project_dependencies for deep analysis
  */
 
 import { createClient } from './supabase/client';
@@ -13,6 +13,10 @@ export interface WorkPattern {
   recentActivity: string[];
   collaborators: string[];
   activityScore: number;
+  activeHours?: number[]; // Hours of day (0-23) when user is most active
+  activeDays?: number[]; // Days of week (0-6) when user is most active
+  avgResponseTime?: number; // Minutes
+  knowledgeSharingScore?: number;
 }
 
 export interface ConnectionSuggestion {
@@ -27,6 +31,17 @@ export interface ConnectionSuggestion {
   sharedInterests: string[];
   suggestedBy: 'ai_pattern_analysis' | 'project_overlap' | 'skill_match' | 'knowledge_similarity';
   confidence: number; // 0-100
+}
+
+export interface AIInsight {
+  id?: string;
+  type: 'shared_team' | 'common_dependencies' | 'knowledge_transfer' | 'timeline_risk';
+  title: string;
+  description: string;
+  actionLabel: string;
+  actionData: any;
+  priorityScore: number;
+  metadata?: any;
 }
 
 export interface SimilarWorkAlert {
@@ -45,36 +60,79 @@ export interface SimilarWorkAlert {
 }
 
 /**
- * Proactive AI Service for work pattern analysis
+ * Proactive AI Service for real work pattern analysis
  */
 export class ProactiveAIService {
   private supabase = createClient();
 
   /**
-   * Analyze a user's work patterns
+   * Log project activity (called when user views/edits projects)
+   */
+  async logProjectActivity(
+    userId: string,
+    projectId: number,
+    activityType: 'view' | 'edit' | 'collaborate' | 'contribute' | 'comment',
+    metadata: any = {},
+    durationSeconds?: number
+  ): Promise<void> {
+    try {
+      const { error } = await this.supabase.rpc('log_project_activity', {
+        p_user_id: userId,
+        p_project_id: projectId,
+        p_activity_type: activityType,
+        p_metadata: metadata,
+        p_duration_seconds: durationSeconds,
+      });
+      
+      if (error) {
+        console.error('[ProactiveAI] Error logging activity:', error);
+      }
+    } catch (error) {
+      console.error('[ProactiveAI] Failed to log activity:', error);
+    }
+  }
+
+  /**
+   * Analyze a user's work patterns from project_activity_log
    */
   async analyzeUserWorkPattern(userId: string): Promise<WorkPattern> {
-    // Get user's projects
-    const { data: userProjects } = await this.supabase
-      .from('project_members')
-      .select('project:projects(name, tags)')
-      .eq('user_id', userId);
+    console.log('[ProactiveAI] Analyzing work pattern for user:', userId);
 
-    // Get user's knowledge contributions
-    const { data: knowledgeItems } = await this.supabase
-      .from('knowledge_items')
-      .select('title, tags, category')
-      .eq('created_by', userId)
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    // Get user's recent activities
-    const { data: activities } = await this.supabase
-      .from('activity_log')
-      .select('action_type, metadata')
+    // Check if we have a cached work pattern
+    const { data: cachedPattern } = await this.supabase
+      .from('user_work_patterns')
+      .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50);
+      .single();
+
+    // If cached and recent (< 1 hour old), return it
+    if (cachedPattern && new Date(cachedPattern.last_analyzed_at).getTime() > Date.now() - 3600000) {
+      console.log('[ProactiveAI] Using cached work pattern');
+      return {
+        userId,
+        topics: cachedPattern.expertise_areas?.map((e: any) => e.topic) || [],
+        projects: cachedPattern.active_projects?.map((p: any) => p.project_id?.toString()) || [],
+        skills: cachedPattern.expertise_areas?.map((e: any) => e.topic) || [],
+        recentActivity: [],
+        collaborators: cachedPattern.frequent_collaborators?.map((c: any) => c.user_id) || [],
+        activityScore: cachedPattern.knowledge_sharing_score || 0,
+        activeHours: cachedPattern.active_hours || [],
+        activeDays: cachedPattern.active_days || [],
+        avgResponseTime: cachedPattern.avg_response_time,
+        knowledgeSharingScore: cachedPattern.knowledge_sharing_score,
+      };
+    }
+
+    // Analyze from scratch using project_activity_log
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data: activities } = await this.supabase
+      .from('project_activity_log')
+      .select('project_id, activity_type, metadata, created_at')
+      .eq('user_id', userId)
+      .gte('created_at', thirtyDaysAgo.toISOString())
+      .order('created_at', { ascending: false });
 
     // Get user's connections
     const { data: connections } = await this.supabase
@@ -90,49 +148,118 @@ export class ProactiveAIService {
       .eq('id', userId)
       .single();
 
-    // Extract patterns
-    const topics = new Set<string>();
-    const projects = new Set<string>();
-    const skills = new Set<string>();
+    // Analyze patterns
+    const projectSet = new Set<number>();
+    const activityTypeCount = new Map<string, number>();
+    const hourlyActivity = new Array(24).fill(0);
+    const dailyActivity = new Array(7).fill(0);
 
-    // From projects
-    if (userProjects && Array.isArray(userProjects)) {
-      userProjects.forEach((up: any) => {
-        if (up.project && !Array.isArray(up.project)) {
-          projects.add(up.project.name);
-          if (Array.isArray(up.project.tags)) {
-            up.project.tags.forEach((tag: string) => topics.add(tag));
+    activities?.forEach(activity => {
+      if (activity.project_id) {
+        projectSet.add(activity.project_id);
+      }
+      activityTypeCount.set(
+        activity.activity_type,
+        (activityTypeCount.get(activity.activity_type) || 0) + 1
+      );
+
+      // Track temporal patterns
+      const activityDate = new Date(activity.created_at);
+      hourlyActivity[activityDate.getHours()]++;
+      dailyActivity[activityDate.getDay()]++;
+    });
+
+    // Find most active hours (top 5)
+    const activeHours = hourlyActivity
+      .map((count, hour) => ({ hour, count }))
+      .filter(h => h.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+      .map(h => h.hour);
+
+    // Find most active days (days with activity)
+    const activeDays = dailyActivity
+      .map((count, day) => ({ day, count }))
+      .filter(d => d.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .map(d => d.day);
+
+    // Get project details for topics extraction
+    const { data: projects } = await this.supabase
+      .from('knowledge_items')
+      .select('id, title, tags, category')
+      .in('id', Array.from(projectSet));
+
+    const topics = new Set<string>();
+    const expertiseAreas: any[] = [];
+
+    projects?.forEach(project => {
+      if (Array.isArray(project.tags)) {
+        project.tags.forEach((tag: string) => {
+          topics.add(tag);
+          // Count engagement per topic
+          const existingExpertise = expertiseAreas.find(e => e.topic === tag);
+          if (existingExpertise) {
+            existingExpertise.project_count++;
+          } else {
+            expertiseAreas.push({ topic: tag, confidence_score: 10, project_count: 1 });
           }
-        }
+        });
+      }
+      if (project.category) {
+        topics.add(project.category);
+      }
+    });
+
+    // Add profile expertise
+    const skills = new Set<string>();
+    if (Array.isArray(profile?.expertise)) {
+      profile.expertise.forEach(skill => {
+        skills.add(skill);
+        topics.add(skill);
       });
     }
 
-    // From knowledge items
-    knowledgeItems?.forEach(item => {
-      if (Array.isArray(item.tags)) {
-        item.tags.forEach((tag: string) => topics.add(tag));
-      }
-      if (item.category) topics.add(item.category);
-    });
+    // Calculate knowledge sharing score
+    const contributionCount = activityTypeCount.get('contribute') || 0;
+    const collaborationCount = activityTypeCount.get('collaborate') || 0;
+    const knowledgeSharingScore = (contributionCount * 5) + (collaborationCount * 3);
 
-    // From profile
-    if (Array.isArray(profile?.expertise)) {
-      profile.expertise.forEach(skill => skills.add(skill));
-    }
+    // Store/update work pattern in database
+    const patternData = {
+      user_id: userId,
+      active_hours: activeHours,
+      active_days: activeDays,
+      frequent_collaborators: connections?.map(c => ({ user_id: c.connected_with, count: 1 })) || [],
+      collaboration_frequency: collaborationCount,
+      expertise_areas: expertiseAreas,
+      active_projects: Array.from(projectSet).map(pid => ({
+        project_id: pid,
+        engagement_score: 50,
+        last_active: new Date().toISOString(),
+      })),
+      knowledge_sharing_score: knowledgeSharingScore,
+      last_analyzed_at: new Date().toISOString(),
+      analysis_version: 1,
+    };
 
-    // Calculate activity score (higher = more active)
-    const activityScore = (activities?.length || 0) + 
-                         (knowledgeItems?.length || 0) * 2 + 
-                         (userProjects?.length || 0) * 3;
+    await this.supabase
+      .from('user_work_patterns')
+      .upsert(patternData, { onConflict: 'user_id' });
+
+    console.log('[ProactiveAI] Work pattern analyzed and cached');
 
     return {
       userId,
       topics: Array.from(topics),
-      projects: Array.from(projects),
+      projects: Array.from(projectSet).map(id => id.toString()),
       skills: Array.from(skills),
-      recentActivity: activities?.map(a => a.action_type) || [],
+      recentActivity: Array.from(activityTypeCount.keys()),
       collaborators: connections?.map(c => c.connected_with) || [],
-      activityScore,
+      activityScore: activities?.length || 0,
+      activeHours,
+      activeDays,
+      knowledgeSharingScore,
     };
   }
 
@@ -412,6 +539,205 @@ export class ProactiveAIService {
   }
 
   /**
+   * Generate AI insights for a specific project
+   */
+  async generateProjectInsights(userId: string, projectId?: number): Promise<AIInsight[]> {
+    console.log('[ProactiveAI] Generating project insights for user:', userId);
+    const insights: AIInsight[] = [];
+
+    try {
+      // Get user's active projects from work pattern
+      const pattern = await this.analyzeUserWorkPattern(userId);
+      const userProjectIds = pattern.projects.map(p => parseInt(p)).filter(id => !isNaN(id));
+
+      if (userProjectIds.length === 0) {
+        console.log('[ProactiveAI] No active projects found');
+        return [];
+      }
+
+      // Use the first project if projectId not specified
+      const targetProjectId = projectId || userProjectIds[0];
+
+      // INSIGHT 1: Shared Team Members
+      // Find team members working on multiple projects
+      const { data: teamMembers, error: teamError } = await this.supabase.rpc(
+        'analyze_shared_team_members',
+        {
+          p_project_id_1: targetProjectId,
+          p_project_id_2: userProjectIds.find(id => id !== targetProjectId) || targetProjectId,
+          p_days_back: 30,
+        }
+      );
+
+      if (teamMembers && teamMembers.length > 0 && !teamError) {
+        const count = teamMembers.length;
+        const topMembers = teamMembers.slice(0, 3).map((m: any) => m.full_name).join(', ');
+        
+        insights.push({
+          type: 'shared_team',
+          title: 'Shared Team Members Detected',
+          description: `${count} team member${count > 1 ? 's are' : ' is'} actively working across multiple projects: ${topMembers}`,
+          actionLabel: 'Coordinate Sprints',
+          actionData: { memberIds: teamMembers.map((m: any) => m.user_id), projectIds: [targetProjectId] },
+          priorityScore: 80 + count * 2,
+        });
+      }
+
+      // INSIGHT 2: Common Dependencies
+      // Find projects with similar technology/knowledge dependencies
+      const { data: dependencies, error: depError } = await this.supabase.rpc(
+        'detect_common_dependencies',
+        {
+          p_project_id: targetProjectId,
+          p_limit: 5,
+        }
+      );
+
+      if (dependencies && dependencies.length > 0 && !depError) {
+        const impactedCount = dependencies.length;
+        const topDeps = dependencies.slice(0, 2).map((d: any) => d.project_title).join(', ');
+        
+        insights.push({
+          type: 'common_dependencies',
+          title: 'Cross-Project Dependencies Found',
+          description: `This project shares critical dependencies with ${impactedCount} other project${impactedCount > 1 ? 's' : ''}: ${topDeps}`,
+          actionLabel: 'Review Impact',
+          actionData: { dependencies: dependencies.map((d: any) => d.related_project_id) },
+          priorityScore: 75 + impactedCount * 3,
+        });
+      }
+
+      // INSIGHT 3: Knowledge Transfer Opportunities
+      // Find projects that could benefit from shared knowledge
+      const { data: opportunities, error: oppError } = await this.supabase.rpc(
+        'identify_knowledge_transfer_opportunities',
+        {
+          p_user_id: userId,
+          p_limit: 5,
+        }
+      );
+
+      if (opportunities && opportunities.length > 0 && !oppError) {
+        const opp = opportunities[0];
+        const sharedTopicsStr = opp.shared_topics?.slice(0, 3).join(', ') || 'related topics';
+        
+        insights.push({
+          type: 'knowledge_transfer',
+          title: 'Knowledge Transfer Opportunity',
+          description: `Team working on "${opp.from_project_title}" has valuable insights for "${opp.to_project_title}" (shared: ${sharedTopicsStr})`,
+          actionLabel: 'Schedule Sync',
+          actionData: {
+            fromProjectId: opp.from_project_id,
+            toProjectId: opp.to_project_id,
+            topics: opp.shared_topics,
+          },
+          priorityScore: 70 + (opp.opportunity_score || 0),
+        });
+      }
+
+      // INSIGHT 4: Timeline Risk Detection
+      // Analyze activity patterns to detect potential timeline risks
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: recentActivity } = await this.supabase
+        .from('project_activity_log')
+        .select('activity_type, created_at')
+        .eq('project_id', targetProjectId)
+        .gte('created_at', thirtyDaysAgo.toISOString());
+
+      if (recentActivity) {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const recentCount = recentActivity.filter(
+          a => new Date(a.created_at) > sevenDaysAgo
+        ).length;
+        
+        const olderCount = recentActivity.filter(
+          a => new Date(a.created_at) <= sevenDaysAgo
+        ).length;
+
+        // If activity dropped significantly in last week
+        if (olderCount > 10 && recentCount < olderCount * 0.3) {
+          insights.push({
+            type: 'timeline_risk',
+            title: 'Activity Slowdown Detected',
+            description: `Project activity decreased by ${Math.round((1 - recentCount/olderCount) * 100)}% in the last week. Team may need support.`,
+            actionLabel: 'Check Team Status',
+            actionData: { projectId: targetProjectId, recentCount, olderCount },
+            priorityScore: 90,
+          });
+        }
+      }
+
+      // Cache insights for fast retrieval
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 1); // Cache for 1 hour
+
+      for (const insight of insights) {
+        await this.supabase
+          .from('ai_insights_cache')
+          .upsert({
+            user_id: userId,
+            project_id: projectId,
+            insight_type: insight.type,
+            title: insight.title,
+            description: insight.description,
+            action_label: insight.actionLabel,
+            action_data: insight.actionData,
+            priority_score: insight.priorityScore,
+            expires_at: expiresAt.toISOString(),
+          }, {
+            onConflict: 'user_id,project_id,insight_type,title',
+          });
+      }
+
+      console.log(`[ProactiveAI] Generated ${insights.length} insights`);
+      return insights.sort((a, b) => b.priorityScore - a.priorityScore);
+    } catch (error) {
+      console.error('[ProactiveAI] Error generating insights:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get cached insights (fast retrieval)
+   */
+  async getCachedInsights(userId: string, projectId?: number): Promise<AIInsight[]> {
+    const now = new Date().toISOString();
+    
+    let query = this.supabase
+      .from('ai_insights_cache')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('expires_at', now)
+      .order('priority_score', { ascending: false });
+
+    if (projectId) {
+      query = query.eq('project_id', projectId);
+    }
+
+    const { data } = await query;
+
+    if (!data || data.length === 0) {
+      // No cache, generate fresh insights
+      return this.generateProjectInsights(userId, projectId);
+    }
+
+    return data.map(d => ({
+      id: d.id.toString(),
+      type: d.insight_type as any,
+      title: d.title,
+      description: d.description,
+      actionLabel: d.action_label,
+      actionData: d.action_data,
+      priorityScore: d.priority_score,
+      metadata: d.metadata,
+    }));
+  }
+
+  /**
    * Run background analysis for all active users
    */
   async runBackgroundAnalysis(): Promise<void> {
@@ -432,13 +758,20 @@ export class ProactiveAIService {
 
     for (const user of activeUsers) {
       try {
+        // Generate work pattern analysis
+        await this.analyzeUserWorkPattern(user.id);
+        
+        // Generate connection suggestions
         const suggestions = await this.generateConnectionSuggestions(user.id);
         
         for (const suggestion of suggestions) {
           await this.storeConnectionSuggestion(suggestion);
         }
 
-        console.log(`[ProactiveAI] Generated ${suggestions.length} suggestions for user ${user.id}`);
+        // Generate project insights
+        await this.generateProjectInsights(user.id);
+
+        console.log(`[ProactiveAI] Analyzed user ${user.id}: ${suggestions.length} suggestions`);
       } catch (error) {
         console.error(`[ProactiveAI] Error analyzing user ${user.id}:`, error);
       }

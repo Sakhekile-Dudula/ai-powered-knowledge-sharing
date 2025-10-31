@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Network, Users, GitBranch, ArrowRight, Calendar, Loader2, Plus } from "lucide-react";
+import { Network, Users, GitBranch, ArrowRight, Calendar, Loader2, Plus, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { ProjectGraph } from "./ProjectGraph";
 import { toast } from "sonner";
+import { getProactiveAI, type AIInsight } from "../utils/proactiveAI";
 
 interface ProjectConnectionsProps {
   accessToken?: string | null;
@@ -22,6 +23,11 @@ export function ProjectConnections({}: ProjectConnectionsProps) {
   const [isGraphOpen, setIsGraphOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  
+  // AI Insights state
+  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Form state
   const [newName, setNewName] = useState("");
@@ -32,7 +38,50 @@ export function ProjectConnections({}: ProjectConnectionsProps) {
 
   useEffect(() => {
     fetchProjects();
+    loadUserAndInsights();
   }, []);
+
+  const loadUserAndInsights = async () => {
+    try {
+      const { createClient } = await import("../utils/supabase/client");
+      const supabase = createClient();
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        await loadAIInsights(user.id);
+      }
+    } catch (error) {
+      console.error("Failed to load user and insights:", error);
+    }
+  };
+
+  const loadAIInsights = async (uid: string) => {
+    setIsLoadingInsights(true);
+    try {
+      console.log('[ProjectConnections] Loading AI insights for user:', uid);
+      const proactiveAI = getProactiveAI();
+      
+      // Get cached insights or generate new ones
+      const insights = await proactiveAI.getCachedInsights(uid);
+      console.log('[ProjectConnections] Loaded insights:', insights);
+      
+      setAiInsights(insights);
+      
+      if (insights.length === 0) {
+        toast.info("No AI insights available yet", {
+          description: "Start working on projects to get AI-powered recommendations!",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load AI insights:", error);
+      toast.error("Failed to load AI insights");
+      // Keep empty array on error
+      setAiInsights([]);
+    } finally {
+      setIsLoadingInsights(false);
+    }
+  };
 
   const fetchProjects = async () => {
     setIsLoading(true);
@@ -167,23 +216,7 @@ export function ProjectConnections({}: ProjectConnectionsProps) {
     },
   ];
 
-  const insights = [
-    {
-      title: "Shared Team Members",
-      description: "3 engineers are working on both Client Portal and Analytics Dashboard",
-      action: "Coordinate sprints",
-    },
-    {
-      title: "Common Dependencies",
-      description: "Security Framework impacts 4 active projects",
-      action: "Review timeline",
-    },
-    {
-      title: "Knowledge Transfer",
-      description: "Cloud Migration team has insights useful for Platform API project",
-      action: "Schedule sync",
-    },
-  ];
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -435,28 +468,75 @@ export function ProjectConnections({}: ProjectConnectionsProps) {
             </CardContent>
           </Card>
 
-          {/* AI Insights */}
+          {/* AI Insights - Real-time AI Analysis */}
           <Card>
-            <CardHeader>
-              <CardTitle>AI Insights</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-500" />
+                AI Insights
+              </CardTitle>
+              {userId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => loadAIInsights(userId)}
+                  disabled={isLoadingInsights}
+                >
+                  {isLoadingInsights ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Refresh"
+                  )}
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {insights.map((insight, index) => (
-                  <div key={index} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3">
-                    <p className="text-slate-900 dark:text-slate-100 text-sm mb-1">{insight.title}</p>
-                    <p className="text-slate-600 dark:text-slate-400 text-xs mb-2">{insight.description}</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full text-xs"
-                      onClick={() => handleInsightAction(insight.action)}
+              {isLoadingInsights ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+                </div>
+              ) : aiInsights.length === 0 ? (
+                <div className="text-center py-8 space-y-2">
+                  <p className="text-slate-600 dark:text-slate-400 text-sm">
+                    No insights available yet
+                  </p>
+                  <p className="text-slate-500 dark:text-slate-500 text-xs">
+                    Work on projects to get AI-powered recommendations
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {aiInsights.map((insight, index) => (
+                    <div 
+                      key={insight.id || index} 
+                      className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-950/20 dark:to-blue-950/20"
                     >
-                      {insight.action}
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                      <div className="flex items-start gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs">
+                          {insight.type.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                        <Badge className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                          {Math.round(insight.priorityScore)}% confidence
+                        </Badge>
+                      </div>
+                      <p className="text-slate-900 dark:text-slate-100 text-sm font-medium mb-1">
+                        {insight.title}
+                      </p>
+                      <p className="text-slate-600 dark:text-slate-400 text-xs mb-3">
+                        {insight.description}
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full text-xs"
+                        onClick={() => handleInsightAction(insight.actionLabel)}
+                      >
+                        {insight.actionLabel}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
