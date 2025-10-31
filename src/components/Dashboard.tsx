@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
 import { ScrollArea } from "./ui/scroll-area";
-import { SEARCH_CONFIG } from "../config/constants";
+import { SmartConnectionsWidget } from "./SmartConnectionsWidget";
 
 // UI types
 interface StatsItem {
@@ -29,15 +29,6 @@ interface TopicData {
   trending: 'up' | 'down' | 'neutral';
 }
 
-interface ExpertData {
-  id: string;
-  name: string;
-  role: string;
-  avatar: string;
-  skills: string[];
-  reason: string;
-}
-
 interface ActivityData {
   id: string;
   user: string;
@@ -55,6 +46,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ accessToken }: DashboardProps) {
+  const [userId, setUserId] = useState<string>('');
   const [stats, setStats] = useState<StatsData>({
     activeConnections: { value: 0, percentage: 0 },
     knowledgeItems: { value: 0, percentage: 0 },
@@ -63,7 +55,6 @@ export function Dashboard({ accessToken }: DashboardProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [trendingTopics, setTrendingTopics] = useState<TopicData[]>([]);
-  const [suggestedExperts, setSuggestedExperts] = useState<ExpertData[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityData[]>([]);
   
   // Dialog states
@@ -85,6 +76,12 @@ export function Dashboard({ accessToken }: DashboardProps) {
       try {
         setIsLoading(true);
         const supabase = createClient();
+
+        // Get current user ID
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          setUserId(currentUser.id);
+        }
 
         // Fetch current dashboard stats
         let { data: statsData, error: statsError } = await supabase
@@ -193,34 +190,7 @@ export function Dashboard({ accessToken }: DashboardProps) {
           );
         }
 
-        // Fetch smart suggested connections
-        const { data: user } = await supabase.auth.getUser();
-        if (user?.user?.id) {
-          const { data: expertsData, error: expertsError } = await supabase
-            .rpc('get_smart_suggested_connections', { 
-              p_user_id: user.user.id 
-            })
-            .limit(SEARCH_CONFIG.SUGGESTED_EXPERTS_LIMIT);
-
-          if (expertsError) {
-            console.warn('Failed to fetch suggested connections:', expertsError.message);
-            // Use fallback empty array
-            setSuggestedExperts([]);
-          } else if (expertsData && expertsData.length > 0) {
-            setSuggestedExperts(
-              expertsData.map((expert: any) => ({
-                id: expert.id,
-                name: expert.full_name,
-                role: expert.role || 'Team Member',
-                avatar: expert.avatar_url || expert.full_name.split(' ').map((n: string) => n[0]).join(''),
-                skills: expert.expertise || [],
-                reason: expert.match_reason || 'Recommended for you'
-              }))
-            );
-          } else {
-            setSuggestedExperts([]);
-          }
-        }
+        // Suggested connections are now handled by SmartConnectionsWidget component
 
       } catch (error: any) {
         console.error('Error fetching dashboard data:', error);
@@ -580,85 +550,8 @@ export function Dashboard({ accessToken }: DashboardProps) {
             </Card>
           </div>
 
-          {/* Suggested Connections */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Suggested Connections</CardTitle>
-              <CardDescription>People who might help with your current work</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {suggestedExperts.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-                  <p>No suggested connections available yet</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {suggestedExperts.map((expert) => (
-                  <HoverCard key={expert.id}>
-                    <HoverCardTrigger asChild>
-                      <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-blue-300 dark:hover:border-blue-500 transition-colors cursor-pointer">
-                        <div className="flex items-start gap-3 mb-3">
-                          <Avatar className="w-12 h-12">
-                            <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-blue-500 text-white font-medium">
-                              {expert.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-slate-900 dark:text-slate-100 font-medium">{expert.name}</p>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm">{expert.role}</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {expert.skills.slice(0, 3).map((skill) => (
-                            <Badge key={skill} variant="secondary" className="text-xs">
-                              {skill}
-                            </Badge>
-                          ))}
-                        </div>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-3 line-clamp-2">{expert.reason}</p>
-                        <button className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background text-foreground hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 w-full">
-                          Connect
-                          <Users className="w-4 h-4 ml-2" />
-                        </button>
-                      </div>
-                    </HoverCardTrigger>
-                    <HoverCardContent className="w-80">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-14 h-14">
-                            <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-blue-500 text-white font-semibold">
-                              {expert.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h4 className="text-sm font-semibold">{expert.name}</h4>
-                            <p className="text-xs text-muted-foreground">{expert.role}</p>
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium mb-2">Skills & Expertise</p>
-                          <div className="flex flex-wrap gap-1">
-                            {expert.skills.map((skill) => (
-                              <Badge key={skill} variant="outline" className="text-xs">
-                                {skill}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">
-                            <span className="font-medium">Why suggested:</span> {expert.reason}
-                          </p>
-                        </div>
-                      </div>
-                    </HoverCardContent>
-                  </HoverCard>
-                ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Suggested Connections - Using Smart Connections Widget */}
+          <SmartConnectionsWidget userId={userId} />
         </>
       )}
 
