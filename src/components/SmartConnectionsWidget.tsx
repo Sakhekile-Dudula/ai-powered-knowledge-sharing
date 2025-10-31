@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Sparkles, UserPlus, X, TrendingUp, Loader2, RefreshCw } from 'lucide-react';
 import { ConnectionSuggestion } from '../utils/proactiveAI';
 import { createClient } from '../utils/supabase/client';
@@ -251,12 +250,9 @@ export function SmartConnectionsWidget({ userId, compact = false }: SmartConnect
         <CardContent className="space-y-3">
           {suggestions.slice(0, 3).map((suggestion) => (
             <div key={suggestion.targetUserId} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg">
-              <Avatar className="w-10 h-10">
-                {suggestion.targetAvatar && <AvatarImage src={suggestion.targetAvatar} />}
-                <AvatarFallback className="bg-purple-100 text-purple-700">
-                  {getInitials(suggestion.targetName)}
-                </AvatarFallback>
-              </Avatar>
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm font-medium">{getInitials(suggestion.targetName)}</span>
+              </div>
               
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{suggestion.targetName}</p>
@@ -312,12 +308,9 @@ export function SmartConnectionsWidget({ userId, compact = false }: SmartConnect
             <div key={suggestion.targetUserId} className="border rounded-lg p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex gap-3">
-                  <Avatar className="w-12 h-12">
-                    {suggestion.targetAvatar && <AvatarImage src={suggestion.targetAvatar} />}
-                    <AvatarFallback className="bg-purple-100 text-purple-700">
-                      {getInitials(suggestion.targetName)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-medium">{getInitials(suggestion.targetName)}</span>
+                  </div>
                   
                   <div>
                     <h4 className="font-semibold">{suggestion.targetName}</h4>
