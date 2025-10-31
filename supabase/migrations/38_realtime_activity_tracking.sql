@@ -1,6 +1,12 @@
 -- Enhanced Real-time Activity Tracking System
 -- This migration creates triggers to automatically log user activities
 
+-- Drop existing log_activity functions (all overloads)
+DROP FUNCTION IF EXISTS log_activity(uuid, text, text, text, uuid);
+DROP FUNCTION IF EXISTS log_activity(uuid, text, text, text, integer);
+DROP FUNCTION IF EXISTS log_activity(uuid, text, text, text, bigint);
+DROP FUNCTION IF EXISTS log_activity(uuid, text, text);
+
 -- Function to log activity
 CREATE OR REPLACE FUNCTION log_activity(
   p_user_id uuid,
