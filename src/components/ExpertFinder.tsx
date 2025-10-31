@@ -188,14 +188,19 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
   };
 
   const handleConnect = async (expertId: string, expertName: string) => {
+    console.log('🔗 Connect button clicked for:', expertName, expertId);
+    
     try {
       setConnectingIds(prev => new Set(prev).add(expertId));
       
       const { createClient } = await import("../utils/supabase/client");
       const supabase = createClient();
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('👤 Current user:', user?.id);
+      
+      if (authError || !user) {
+        console.error('❌ Auth error:', authError);
         toast.error("You must be logged in to connect");
         setConnectingIds(prev => {
           const newSet = new Set(prev);
@@ -205,28 +210,36 @@ export function ExpertFinder({ accessToken, currentUserName = "You" }: ExpertFin
         return;
       }
 
-      // Create bidirectional connection using UPSERT
+      console.log('📝 Creating connection:', user.id, '->', expertId);
+
+      // Create bidirectional connection using INSERT (not upsert since updated_at might not exist)
       const { error: error1 } = await supabase
         .from('user_connections')
-        .upsert({
+        .insert({
           user_id: user.id,
           connected_with: expertId,
-          status: 'connected',
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,connected_with'
+          status: 'connected'
         });
+
+      if (error1) {
+        console.error('❌ Error creating connection 1:', error1);
+      } else {
+        console.log('✅ Connection 1 created');
+      }
 
       const { error: error2 } = await supabase
         .from('user_connections')
-        .upsert({
+        .insert({
           user_id: expertId,
           connected_with: user.id,
-          status: 'connected',
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,connected_with'
+          status: 'connected'
         });
+
+      if (error2) {
+        console.error('❌ Error creating connection 2:', error2);
+      } else {
+        console.log('✅ Connection 2 created');
+      }
 
       if (error1 || error2) {
         console.error("Failed to create connection:", error1 || error2);
